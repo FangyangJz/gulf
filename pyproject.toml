@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "gulf"
+version = "0.1.0"
+description = ""
+authors = ["fangyang_gpu <fangyang.jing@hotmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+akshare = "^1.11.28"
+dolphindb = "^1.30.22.2"
+requests = "^2.31.0"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

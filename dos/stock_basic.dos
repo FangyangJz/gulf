@@ -1,0 +1,30 @@
+table6_name = "stock_basic_table";
+db6_path = "dfs://stock_basic";
+db6 = database(db6_path);
+table6 = loadTable(db6, table6_name);
+
+t6_col = table6.columnNames();
+t6_col;
+t6_col[t6_col.size()-2:];
+t6_col[:t6_col.size()-1];
+t6_col[:t6_col.size()-4] <- t6_col[t6_col.size()-1:];
+
+select * from table6;
+select * from table6 where delist_date!=NULL;
+// 所处行业为 - 的股票都是退市的
+select * from table6 where 所处行业='-';
+// alpha101 infoData , 没有 cap 总市值, 只有行业信息, 因为cap只与 alpha56 有关
+select jj_code, symbol as securityid, industry as indclass from table6 where exchange!=`BSE, industry!=NULL;
+
+table7_name = "trade_calender_table";
+db7_path = "dfs://trade_calender";
+db7 = database(db7_path);
+table7 = loadTable(db7, table7_name);
+select * from table7;
+
+table8_name = "index_hushen300_members_table";
+db8_path = "dfs://stock_index";
+db8 = database(db8_path);
+table8 = loadTable(db8, table8_name);
+select * from table8;
+select * from table8 where cur_sign=1 and in_date<2006.01.01;
