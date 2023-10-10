@@ -48,9 +48,10 @@ def get_bond_daily_df(
         # 2. 获取单只债券 ohlcv 全部历史信息
         bond_zh_hs_cov_daily_df = ak.bond_zh_hs_cov_daily(symbol=f"{market_str}{bond_code}")
     except Exception as e:
+        print(f"[get_bond_daily_df] {market_str}{bond_code},  retry change market")
+        print(e)
         market_str = "sz" if market == "SHSE" else "sh"
         bond_zh_hs_cov_daily_df = ak.bond_zh_hs_cov_daily(symbol=f"{market_str}{bond_code}")
-        print(f"[get_bond_daily_df] {market_str}{bond_code} ", e)
 
     bond_zh_hs_cov_daily_df['bond_code'] = bond_code
     bond_zh_hs_cov_daily_df['bond_name'] = bond_name
@@ -168,11 +169,15 @@ def get_bond_index_daily():
 
 
 if __name__ == '__main__':
-
-    df = get_bond_index_daily()
-
     from gulf.akshare.bond import get_bond_basic_df
-    df1, _ = get_bond_basic_df()
+
+    df1, df2 = get_bond_basic_df(data_delist_status='exclude')
+    # df4 = get_bond_daily_df(bond_code='SHSE.110026', bond_name='xx', bond_scale=100,
+    #                         listing_date=datetime(1970, 1,1), stock_code='', stock_name='', market='', res_dict={})
+    df3 = get_bond_daily_df(bond_code='SZSE.127049', bond_name='xx', bond_scale=100,
+                            listing_date=datetime(1970, 1,1), stock_code='', stock_name='', market='', res_dict={})
     res_dict = dict()
     update_bond_daily_res_dict_thread(bond_basic_df=df1, res_dict=res_dict)
     print(res_dict)
+
+    df = get_bond_index_daily()

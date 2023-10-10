@@ -51,6 +51,23 @@ class BondDB(Dolphindb):
         db=database('{DfsDbPath.bond_daily_code}', COMPO, [db_code_hash,db_date_range], engine=`{self.engine.value})
         """
 
+    def download_bond_daily_table(self):
+        from gulf.akshare.bond import update_bond_daily_res_dict_thread
+        from gulf.dolphindb.tables.dimension.bond_tables import BondBasicTable
+
+        res_dict = dict()
+        update_bond_daily_res_dict_thread(
+            bond_basic_df=self.get_dimension_table_df(BondBasicTable, from_db=False),
+            res_dict=res_dict
+        )
+        self.save_res_dict_to_table(partition_table=bond_daily_table, res_dict=res_dict)
+
 
 if __name__ == '__main__':
     db = BondDB()
+
+    # Note: BondBasicTable 从网上获取的全部转债, 
+    # 如果包含退市债, 历史日数据 47 万
+    # 如果不包含退市债, 历史日数据 24 万
+    # sina 网络的接口有限速, 当前配置可能需要调整
+    db.download_bond_daily_table()

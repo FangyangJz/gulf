@@ -534,15 +534,7 @@ class Dolphindb:
         re.append(table=table)
         print(f"[Dolphindb] Success save dimension table, {table_name} to {db_path}")
 
-    def download_bond_daily_table(self):
-        from avalon.datafeed.akshare.bond import update_bond_daily_res_dict_thread
 
-        res_dict = dict()
-        update_bond_daily_res_dict_thread(
-            bond_basic_df=self.get_dimension_table_df(BondBasicTable, from_db=False),
-            res_dict=res_dict
-        )
-        self.save_res_dict_to_table(partition_table=bond_daily_table, res_dict=res_dict)
 
     def download_stock_moneyflow_daily_table(self):
         '''
