@@ -1,4 +1,11 @@
+gulf
+========================
+![gulf](https://github.com/FangyangJz/gulf/assets/19723117/2d2a06b7-e4f5-429a-b87a-1b850070d033)
+## 项目描述
+基于 Dolphindb 封装的金融数据应用
+
 ## 项目说明
+
 
 使用 poetry 作为依赖管理, conda 作为虚拟环境管理 
 
