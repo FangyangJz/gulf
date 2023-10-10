@@ -15,7 +15,7 @@ from gulf.dolphindb.base import Dolphindb
 from gulf.dolphindb.const import Engine
 from gulf.dolphindb.db_path import DfsDbPath
 from gulf.dolphindb.tables import bond_daily_table
-from gulf.dolphindb.tables.dimension.bond_tables import BondBasicTable
+from gulf.dolphindb.tables.dimension.bond_tables import BondBasicTable, BondRedeemTable
 
 
 class BondDB(Dolphindb):
@@ -126,9 +126,14 @@ class BondDB(Dolphindb):
         res_dict.clear()
         self.save_res_dict_to_db_table(partition_table=bond_daily_table, res_dict={'df': df})
 
+    def update_dimension_tables(self):
+        bond_redeem_df = self.get_dimension_table_df(BondRedeemTable, from_db=False)
+
 
 if __name__ == '__main__':
     db = BondDB()
+
+    db.update_dimension_tables()
 
     # Note: BondBasicTable 从网上获取的全部转债, 
     # 如果包含退市债, 历史日数据 47 万

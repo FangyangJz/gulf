@@ -10,6 +10,7 @@ from typing import Union
 from gulf.dolphindb.base import Dolphindb
 from gulf.dolphindb.const import Engine
 from gulf.dolphindb.db_path import DfsDbPath
+from gulf.dolphindb.tables import TradeCalenderTable, StockBasicTable
 
 
 class StockDB(Dolphindb):
@@ -59,6 +60,11 @@ class StockDB(Dolphindb):
         db=database('{DfsDbPath.stock_daily}', RANGE, yearRange, engine=`{self.engine.value})
         """
 
+    def update_dimension_tables(self):
+        trade_calender = self.get_dimension_table_df(TradeCalenderTable, from_db=False)
+        stock_basic_df = self.get_dimension_table_df(StockBasicTable, from_db=False)
+
 
 if __name__ == '__main__':
-    pass
+    db = StockDB()
+    db.update_dimension_tables()
