@@ -15,7 +15,7 @@ class DfsDbPath:
     bond_index = dfs_header + "bond_index"
     bond_daily_code = dfs_header + "bond_daily_code"
 
-    btc_lob = dfs_header + "btc_lob"
+    crypto_lob = dfs_header + "crypto_lob"
 
 
 if __name__ == '__main__':

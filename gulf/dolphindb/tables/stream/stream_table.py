@@ -1,5 +1,5 @@
 from typing import Union
-from gulf.dolphindb.config.schema import Schema, crypto_depth_table_schema
+from gulf.dolphindb.tables.partition.schema import Schema, crypto_depth_table_schema
 
 
 class StreamTable:
@@ -171,9 +171,9 @@ if __name__ == '__main__':
     import time
     import numpy as np
     import pandas as pd
-    from avalon.dolphindb import Dolphindb
+    from gulf.dolphindb.crypto import CryptoDB
 
-    db = Dolphindb()
+    db = CryptoDB()
     table_name = "btc_table"
 
     # pub

@@ -11,12 +11,10 @@ from tqdm import tqdm
 from typing import List, Dict, Callable, Type
 
 from gulf.dolphindb.db_path import DfsDbPath
-from gulf.dolphindb.tables.dimension.dimension_table import DimensionTable, StockBasicTable, BondBasicTable, TradeCalenderTable, \
-    IndexHS300MembersTable, BondDelistTable, IndexHS300DailyTable, BondIndexTable, BondRedeemTable
-from gulf.dolphindb.tables.partition.table import PartitionTable, stock_daily_table, hk_hold_table, bond_daily_table, \
-    stock_moneyflow_hsgt_table, stock_fin_table, stock_pingji_table, index_concept_daily_table, \
-    index_industry_daily_table, stock_moneyflow_daily_table, industry_moneyflow_daily_table
 from gulf.dolphindb.const import DolType_2_np_dtype_dict, Engine
+from gulf.dolphindb.tables.dimension.table import DimensionTable
+from gulf.dolphindb.tables.partition.stock_tables import index_concept_daily_table
+from gulf.dolphindb.tables.partition.table import PartitionTable
 from gulf.utils.network import get_lan_ip
 
 
@@ -55,90 +53,27 @@ class Dolphindb:
         # 创建连接池（用于数据写入）
         self.pool = ddb.DBConnectionPool(self.host, self.port, 1, self.username, self.password)
 
-        # self.session.dropDatabase(dbPath=self.bond_daily_code_db_path)
-        # 脚本创建不同 partitions 数据库
-        self.init_db_path_dict = {
-            DfsDbPath.stock_daily_code: self.init_stock_daily_code_db,
-            DfsDbPath.stock_daily: self.init_stock_daily_db,
-            DfsDbPath.bond_daily_code: self.init_bond_daily_code_db,
-            DfsDbPath.index_daily_code: self.init_index_daily_code_db,
-            DfsDbPath.crypto_lob: self.init_btc_lob_db,
-        }
-        self.init_db(clear=clear_db)
+        # self.partition_tables = [
+        #     stock_daily_table, stock_moneyflow_daily_table, industry_moneyflow_daily_table,
+        #     hk_hold_table, bond_daily_table,
+        #     index_concept_daily_table, index_industry_daily_table
+        # ]
+        # [self._create_table(table=table) for table in self.partition_tables]
 
-        self.partition_tables = [
-            stock_daily_table, stock_moneyflow_daily_table, industry_moneyflow_daily_table,
-            hk_hold_table, bond_daily_table,
-            index_concept_daily_table, index_industry_daily_table
-        ]
-        [self._create_table(table=table) for table in self.partition_tables]
-
-
-
-    def init_stock_daily_db(self):
+    def init_db(self, init_db_path_dict: Dict[str, str], clear: bool = False):
         """
-        只有日期 没有 股票代码
-        :return:
-        """
-
-        create_db_script = f"""
-        yearRange=date({self.stock_start_year}.01M + 12*0..{self.end_year - self.stock_start_year})
-        db=database('{DfsDbPath.stock_daily}', RANGE, yearRange, engine=`{self.engine.value})
-        """
-
-        self.session.run(create_db_script)
-
-    def init_bond_daily_code_db(self):
-        """
-        注意! 由于column指定了其他, 不是默认值, [db_code_hash,db_date_range] 修改过顺序
-        :return:
-        """
-
-        create_db_script = f"""
-        db_code_hash=database(, HASH, [SYMBOL, 6])
-        yearRange=date({self.bond_start_year}.01M + 12*0..{self.end_year - self.bond_start_year})
-        db_date_range=database(, RANGE, yearRange)
-        db=database('{DfsDbPath.bond_daily_code}', COMPO, [db_code_hash,db_date_range], engine=`{self.engine.value})
-        """
-        self.session.run(create_db_script)
-
-    def init_index_daily_code_db(self):
-        """
-        注意! 由于column指定了其他, 不是默认值, [db_code_hash,db_date_range] 修改过顺序
-        :return:
-        """
-
-        create_db_script = f"""
-        db_code_hash=database(, HASH, [SYMBOL, 6])
-        yearRange=date({self.bond_start_year}.01M + 12*0..{self.end_year - self.bond_start_year})
-        db_date_range=database(, RANGE, yearRange)
-        db=database('{DfsDbPath.index_daily_code}', COMPO, [db_code_hash,db_date_range], engine=`{self.engine.value})
-        """
-        self.session.run(create_db_script)
-
-    def init_btc_lob_db(self):
-        create_db_script = f"""
-        db_code_hash = database("", HASH,[SYMBOL,3])
-        db_date_value = database(, VALUE, 2022.01.01..2030.01.01)
-        db=database('{DfsDbPath.crypto_lob}', COMPO, [db_date_value, db_code_hash], engine=`{self.engine.value})
-        """
-
-        self.session.run(create_db_script)
-
-    def init_db(self, clear=False):
-        """
+        :param init_db_path_dict:
         :param clear: 默认为 False, 如果为 True, 强制清空数据库, 然后重新建立分区数据库
-        :return:
         """
         if clear:
-            for db_path in self.init_db_path_dict.keys():
+            for db_path in init_db_path_dict.keys():
                 if self.session.existsDatabase(db_path):
                     self.session.dropDatabase(db_path)
                     print(f"[Dolphindb] Drop database: {db_path}")
 
-        for db_path, init_func in self.init_db_path_dict.items():
+        for db_path, script in init_db_path_dict.items():
             if not self.session.existsDatabase(db_path):
-                init_func()
+                self.session.run(script)
 
     def _create_table(
             self, table: PartitionTable,
@@ -607,7 +542,7 @@ class Dolphindb:
             bond_basic_df=self.get_dimension_table_df(BondBasicTable, from_db=False),
             res_dict=res_dict
         )
-        self.download_daily_table(partition_table=bond_daily_table, res_dict=res_dict)
+        self.save_res_dict_to_table(partition_table=bond_daily_table, res_dict=res_dict)
 
     def download_stock_moneyflow_daily_table(self):
         '''
@@ -621,7 +556,7 @@ class Dolphindb:
             stock_basic_df=self.get_dimension_table_df(StockBasicTable, from_db=False),
             res_dict=res_dict
         )
-        self.download_daily_table(partition_table=stock_moneyflow_daily_table, res_dict=res_dict)
+        self.save_res_dict_to_table(partition_table=stock_moneyflow_daily_table, res_dict=res_dict)
 
     def download_industry_moneyflow_daily_table(self):
         '''
@@ -635,7 +570,7 @@ class Dolphindb:
             stock_basic_df=self.get_dimension_table_df(StockBasicTable, from_db=False),
             res_dict=res_dict
         )
-        self.download_daily_table(partition_table=industry_moneyflow_daily_table, res_dict=res_dict)
+        self.save_res_dict_to_table(partition_table=industry_moneyflow_daily_table, res_dict=res_dict)
 
     def download_index_daily_table(
             self, partition_table: PartitionTable = index_concept_daily_table,
@@ -645,15 +580,15 @@ class Dolphindb:
         df = None
         table_name = partition_table.name
         if table_name == "index_concept_daily_table":
-            from avalon.datafeed.akshare.stock.index_concept import get_stock_index_concept_em_daily_df
+            from gulf.akshare.stock.index_concept import get_stock_index_concept_em_daily_df
             df = get_stock_index_concept_em_daily_df(start_date=start_date, end_date=end_date)
         elif table_name == "index_industry_daily_table":
             from avalon.datafeed.akshare.stock.index_industry import get_stock_index_industry_em_daily_df
             df = get_stock_index_industry_em_daily_df(start_date=start_date, end_date=end_date)
 
-        self.download_daily_table(partition_table=partition_table, res_dict={table_name: df})
+        self.save_res_dict_to_table(partition_table=partition_table, res_dict={table_name: df})
 
-    def download_daily_table(
+    def save_res_dict_to_table(
             self, partition_table: PartitionTable, res_dict: Dict, partition_col: str = 'jj_code'
     ):
         db_path = partition_table.db_path

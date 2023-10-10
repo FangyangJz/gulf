@@ -16,12 +16,12 @@ def test_handler(els):
 
 
 if __name__ == '__main__':
-    from gulf.dolphindb import Dolphindb
+    from gulf.dolphindb.crypto import CryptoDB
     from threading import Event
     from stream_table_test_pub import table_name
-    from avalon.dolphindb.config.stream_table import StreamTable
+    from gulf.dolphindb.tables.stream.stream_table import StreamTable
 
-    db = Dolphindb()
+    db = CryptoDB()
 
     db.session.enableStreaming()
 

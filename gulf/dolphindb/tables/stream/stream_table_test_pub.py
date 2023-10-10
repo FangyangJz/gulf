@@ -3,18 +3,19 @@
 # @Datetime : 2023/3/5 21:06
 # @Author   : Fangyang
 # @Software : PyCharm
+
 from tqdm import tqdm
 import time
 import numpy as np
 import pandas as pd
-from avalon.dolphindb import Dolphindb
-from avalon.dolphindb.config.stream_table import StreamTable
-from avalon.dolphindb.config.schema import crypto_depth_table_schema
+from gulf.dolphindb.crypto import CryptoDB
+from gulf.dolphindb.tables.stream.stream_table import StreamTable
+from gulf.dolphindb.tables.partition.schema import crypto_depth_table_schema
 
 table_name = "btc_table"
 
 if __name__ == '__main__':
-    db = Dolphindb()
+    db = CryptoDB()
 
     # pub
     t = StreamTable(name=table_name, schema=crypto_depth_table_schema(1))

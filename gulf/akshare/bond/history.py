@@ -168,8 +168,11 @@ def get_bond_index_daily():
 
 
 if __name__ == '__main__':
-    # df = get_bond_index_daily()
 
+    df = get_bond_index_daily()
+
+    from gulf.akshare.bond import get_bond_basic_df
+    df1, _ = get_bond_basic_df()
     res_dict = dict()
     update_bond_daily_res_dict_thread(bond_basic_df=df1, res_dict=res_dict)
     print(res_dict)

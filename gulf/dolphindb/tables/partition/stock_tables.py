@@ -1,17 +1,14 @@
-from typing import Union
+# !/usr/bin/env python3
+# -*- coding:utf-8 -*-
+# @Datetime : 2023/10/10 8:29
+# @Author   : Fangyang
+# @Software : PyCharm
 
-from gulf.dolphindb.config.db_path import DfsDbPath
-from gulf.dolphindb.config.schema import (
-    stock_daily_table_schema, hk_hold_table_schema, bond_daily_table_schema,
-    Schema, index_daily_table_schema, stock_moneyflow_daily_table_schema, industry_moneyflow_daily_table_schema
-)
-
-
-class PartitionTable:
-    def __init__(self, name: str, db_path: str, schema: Union[Schema, None]):
-        self.name = name
-        self.db_path = db_path
-        self.schema = schema
+from gulf.dolphindb.db_path import DfsDbPath
+from gulf.dolphindb.tables.partition.schema import industry_moneyflow_daily_table_schema, index_daily_table_schema, \
+    hk_hold_table_schema
+from gulf.dolphindb.tables.partition.stock_schema import stock_daily_table_schema, stock_moneyflow_daily_table_schema
+from gulf.dolphindb.tables.partition.table import PartitionTable
 
 
 stock_daily_table = PartitionTable(
@@ -50,14 +47,6 @@ hk_hold_table = PartitionTable(
     schema=hk_hold_table_schema()
 )
 
-bond_daily_table = PartitionTable(
-    name="bond_daily_table",
-    db_path=DfsDbPath.bond_daily_code,
-    schema=bond_daily_table_schema()
-)
-
-
-
 # dfs分区数据库, 建完库以后, 数据表通过python api 写入,
 # 根据 dataframe 结构动态定义 schema
 stock_moneyflow_hsgt_table = PartitionTable(
@@ -77,3 +66,6 @@ stock_pingji_table = PartitionTable(
     db_path=DfsDbPath.stock_daily_code,
     schema=None
 )
+
+if __name__ == '__main__':
+    pass

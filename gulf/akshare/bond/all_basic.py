@@ -4,15 +4,17 @@
 # @Author   : Fangyang
 # @Software : PyCharm
 from functools import cache
+from typing import Tuple
 
 import akshare as ak
+import pandas as pd
 
 from gulf.akshare.bond.redeem import get_bond_cb_redeem_jsl_df
 from gulf.utils.code2code import MARKET_SH, MARKET_SZ, JUEJIN_MARKET_MAP, trans_to_juejin_code
 
 
 @cache
-def gen_bond_basic_df(data_delist_status: str = "include"):
+def get_bond_basic_df(data_delist_status: str = "include") -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     返回 (bond_zh_cov_df, redeem_df）
 
@@ -63,15 +65,15 @@ if __name__ == '__main__':
     import time
 
     start_time = time.perf_counter()
-    df1, df2 = gen_bond_basic_df()
+    df1, df2 = get_bond_basic_df()
     print(f"Time cost: {time.perf_counter() - start_time}s")
 
     start_time = time.perf_counter()
-    df1, df2 = gen_bond_basic_df()
+    df1, df2 = get_bond_basic_df()
     print(f"Time cost: {time.perf_counter() - start_time}s")
 
     start_time = time.perf_counter()
-    df1, df2 = gen_bond_basic_df()
+    df1, df2 = get_bond_basic_df()
     print(f"Time cost: {time.perf_counter() - start_time}s")
 
     print(1)
