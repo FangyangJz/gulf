@@ -1,0 +1,56 @@
+use ta;
+
+table_name = "bond_daily_table";
+db_path = "dfs://bond_daily_code";
+db = database(db_path);
+table = loadTable(db, table_name);
+
+select count(*) from table;
+
+// 合成 volume bar
+volThreshold = int(1e7);
+select * from (select last(trade_date) as barStart, first(open) as open, max(high) as high, min(low) as low, last(close) as close,
+last(volume) as volume, last(cumvol) as cumvol  
+from (select *, int(cumsum(volume*close)) as cumvol from table context by jj_code) 
+group by jj_code, bar(cumvol, volThreshold) as volBar) where barStart>2021.01.01 ;
+
+// 查看 时间最新 的 10 条数据
+select top 10 * from table order by trade_date desc;
+
+t1 = select * from table;
+select * from lj(t1, (select mean(open) as mo from t1 where close<100 group by trade_date), `trade_date);
+
+
+bond_table = 
+select top 10 jj_code, trade_date, open, high, low, close, volume, 
+stock_code as securityid, bond_scale, trans_stock_premium, duallow  
+from table;
+bond_table;
+
+select top 10 jj_code, trade_date, open, high, low, close, volume, 
+stock_code as securityid, bond_scale, trans_stock_premium, duallow  
+from table 
+where jj_code in ["SZSE.123080","SHSE.113567","SZSE.128040","SHSE.110070"] 
+context by jj_code;
+
+t2 = select * from table where trade_date=2022.09.01;
+t2;
+t3 = t2[shuffle(0..(t2.size()-1))];
+t3[:5]
+
+
+select top 10 *, add(rank(duallow),rank(bond_scale)) as duallow_rank from table where trade_date=2022.10.18 order by duallow_rank asc;
+select top 10 *, add(rank(duallow, percent=true),rank(bond_scale, percent=true)) as duallow_rank from table where trade_date=2022.09.01 order by duallow_rank asc;
+select top 20 * from table where jj_code='SHSE.113635', trade_date<=2022.09.01 order by trade_date desc;
+select *, rsi(close, 3) as rsi from table where jj_code in ['SHSE.113635', 'SHSE.110002'], trade_date<=2022.09.01 context by jj_code limit -1;
+
+
+table6_name = "stock_basic_table";
+db6_path = "dfs://stock_basic";
+db6 = database(db6_path);
+table6 = loadTable(db6, table6_name);
+// select * from table6;
+// alpha101 infoData , 没有 cap 总市值, 只有行业信息, 因为cap只与 alpha56 有关
+select jj_code, symbol as securityid, industry as indclass from table6 where exchange!=`BSE, industry!=NULL;
+
+select * from table where jj_code='SZSE.123222';

@@ -21,12 +21,9 @@ from gulf.utils.network import get_lan_ip
 class Dolphindb:
 
     def __init__(
-            self,
-            host: str = None, port: int = 8848,
+            self, host: str = None, port: int = 8848,
             username: str = 'admin', password: str = '123456',
-            engine: Engine = Engine.TSDB,
-            clear_db: bool = False,
-            enable_async: bool = False
+            engine: Engine = Engine.TSDB, enable_async: bool = False
     ):
         """
         :param host:
@@ -235,15 +232,7 @@ class Dolphindb:
         '''
         if not res_dict:
             return
-
-        res_list = []
-        for _, v in res_dict.items():
-            # copy: 00:01:24
-            # no copy : 00:02:35
-            # list append then concat once: 00:00:00
-            if not v.empty:
-                res_list.append(v)
-        res_df = pd.concat(res_list)
+        res_df = pd.concat(res_dict.values())
         res_df = res_df[columns]  # TODO 注意 !!! append 的 df columns 顺序必须和建表时的顺序一致
 
         # 取到的 volume 列数据类型不一致, 有int和float混合的问题, 导致写数据库的时候报错,
@@ -258,99 +247,6 @@ class Dolphindb:
         print(f"[Dolphindb] Write len:{len(res_df)} data to db cost:{time.perf_counter() - start_time:.2f}s")
 
         res_dict.clear()
-
-    def download_daily_code_by_date(
-            self, table: PartitionTable,
-            tushare_func_list: List[Callable],
-            start_idx: int = -1,
-            end_idx: int = 10_0000
-    ):
-        """
-        从当前日期向前循环日期,
-        股票日数据+每日指标合表的 daily 数据不用这个方法, 用 by_code 遍历,
-        hk_hold_table 用到这个方法
-
-        :param table:
-        :param tushare_func_list:
-        :param start_idx: 从 (当前日期 - start_idx) 开始循环
-        :param end_idx: 控制循环到 (当前日期 - end_idx) 个交易日 结束, 即一共循环了 (end_idx-sign(start_idx)) 个交易日
-        :return:
-        """
-        from avalon.datafeed.xcsc_tushare import TUSHARE_CRAWL_STOP_INTERVEL, update_res_dict_by_date
-        from avalon.datafeed.xcsc_tushare import TUSHARE_CRAWL_CONCURRENT_LIMIT
-
-        db_path = table.db_path
-        table_name = table.name
-        columns_list = table.schema.columns_list
-        columns = table.schema.columns
-        types = table.schema.types
-
-        # partitionColName 指定一个就行, 指定list 或者 '`trade_date`jj_code', 都要报错
-        # https://stackoverflow.com/questions/70285720/dolphindb-python-api-issues-with-partitioncolname-when-writing-data-to-dfs-tabl
-        # 因为后面是按照单日进行appender, 所以这里用 jj_code 做并发
-        appender = ddb.PartitionedTableAppender(
-            dbPath=db_path,
-            tableName=table_name,
-            partitionColName='jj_code',
-            dbConnectionPool=self.pool,
-        )
-
-        calender_df = self.get_dimension_table_df(TradeCalenderTable, from_db=False)
-        calender_df = calender_df[calender_df['trade_date'] <= datetime.datetime.now()]
-        calender_ss = calender_df.sort_values(by='trade_date', ascending=False)['trade_date'].dt.strftime("%Y%m%d")
-
-        print("\n" + "=" * 50)
-        print(f"[Dolphindb] Iter Date. Start to download [{table_name}] data by date, db path:{db_path}")
-        print(f"[Dolphindb] Iter Date. Date length {len(calender_ss)}")
-        print(f"[Dolphindb] Iter Date. Code idx range [{start_idx}:{end_idx}]")
-        print(f"[Dolphindb] Iter Date. Date range [{calender_ss.iloc[0]}:{calender_ss.iloc[-1]}]")
-        print("=" * 50)
-
-        t_list = []
-        res_dict = dict()
-        for idx, trade_date in tqdm(enumerate(calender_ss), desc=f"Downloading {table_name} by iter date"):
-
-            if idx < start_idx:
-                continue
-            elif idx >= end_idx:
-                break
-
-            if datetime.datetime.strptime(trade_date, "%Y%m%d") < self.start_datetime:
-                break
-
-            # update_res_dict_by_date(trade_date, tushare_func_list, columns_list, res_dict)
-            #####################
-            # 多线程方式
-            t = threading.Thread(
-                target=update_res_dict_by_date, args=(trade_date, tushare_func_list, columns_list, res_dict)
-            )
-            t.start()
-            t_list.append(t)
-            ####################################################
-
-            # 遵守 tushare 40次/秒 访问接口的限制
-            if len(t_list) > TUSHARE_CRAWL_CONCURRENT_LIMIT:
-                [t.join() for t in t_list]
-                t_list = []
-
-                # res_dict 中没有数据, 跳出循环
-                if not res_dict:
-                    break
-
-                try:
-                    self.save_res_dict_df_to_db(appender=appender, res_dict=res_dict, columns=columns, types=types)
-                except Exception as e:
-                    print(e)
-
-                print(f"[Dolphindb] Obey tushare rule, wait {TUSHARE_CRAWL_STOP_INTERVEL}s ...")
-                time.sleep(TUSHARE_CRAWL_STOP_INTERVEL)
-
-            # for debug
-            # if idx == 500:
-            #     break
-
-        [t.join() for t in t_list]
-        self.save_res_dict_df_to_db(appender=appender, res_dict=res_dict, columns=columns, types=types)
 
     def download_stock_moneyflow_hsgt_table(self):
         """
@@ -534,8 +430,6 @@ class Dolphindb:
         re.append(table=table)
         print(f"[Dolphindb] Success save dimension table, {table_name} to {db_path}")
 
-
-
     def download_stock_moneyflow_daily_table(self):
         '''
         akshare 只有最近3个多月的数据
@@ -548,21 +442,21 @@ class Dolphindb:
             stock_basic_df=self.get_dimension_table_df(StockBasicTable, from_db=False),
             res_dict=res_dict
         )
-        self.save_res_dict_to_table(partition_table=stock_moneyflow_daily_table, res_dict=res_dict)
+        self.save_res_dict_to_db_table(partition_table=stock_moneyflow_daily_table, res_dict=res_dict)
 
     def download_industry_moneyflow_daily_table(self):
         '''
         akshare 只有最近3个多月的数据
         :return:
         '''
-        from avalon.datafeed.akshare.stock.moneyflow import update_industry_daily_moneyflow_res_dict_thread
+        from gulf.akshare.stock.moneyflow import update_industry_daily_moneyflow_res_dict_thread
 
         res_dict = dict()
         update_industry_daily_moneyflow_res_dict_thread(
             stock_basic_df=self.get_dimension_table_df(StockBasicTable, from_db=False),
             res_dict=res_dict
         )
-        self.save_res_dict_to_table(partition_table=industry_moneyflow_daily_table, res_dict=res_dict)
+        self.save_res_dict_to_db_table(partition_table=industry_moneyflow_daily_table, res_dict=res_dict)
 
     def download_index_daily_table(
             self, partition_table: PartitionTable = index_concept_daily_table,
@@ -575,12 +469,12 @@ class Dolphindb:
             from gulf.akshare.stock.index_concept import get_stock_index_concept_em_daily_df
             df = get_stock_index_concept_em_daily_df(start_date=start_date, end_date=end_date)
         elif table_name == "index_industry_daily_table":
-            from avalon.datafeed.akshare.stock.index_industry import get_stock_index_industry_em_daily_df
+            from gulf.akshare.stock.index_industry import get_stock_index_industry_em_daily_df
             df = get_stock_index_industry_em_daily_df(start_date=start_date, end_date=end_date)
 
-        self.save_res_dict_to_table(partition_table=partition_table, res_dict={table_name: df})
+        self.save_res_dict_to_db_table(partition_table=partition_table, res_dict={table_name: df})
 
-    def save_res_dict_to_table(
+    def save_res_dict_to_db_table(
             self, partition_table: PartitionTable, res_dict: Dict, partition_col: str = 'jj_code'
     ):
         db_path = partition_table.db_path
@@ -595,11 +489,24 @@ class Dolphindb:
             dbConnectionPool=self.pool
         )
 
-        self.save_res_dict_df_to_db(
-            appender=appender, res_dict=res_dict,
-            columns=columns,
-            types=types
-        )
+        if not res_dict:
+            return
+
+        res_df = pd.concat(res_dict.values())
+        res_df = res_df[columns]  # TODO 注意 !!! append 的 df columns 顺序必须和建表时的顺序一致
+
+        # 取到的 volume 列数据类型不一致, 有int和float混合的问题, 导致写数据库的时候报错,
+        # 这里做类型一致性检查和修正, 所以datetime类型在修正过程中直接转换了,省去下面这行
+        # table_df['trade_date'] = pd.to_datetime(table_df['trade_date'])
+        for col, dtype, dol_type in zip(columns, res_df.dtypes, types):
+            if DolType_2_np_dtype_dict[dol_type] != dtype:
+                res_df[col] = res_df[col].astype(DolType_2_np_dtype_dict[dol_type])
+
+        start_time = time.perf_counter()
+        appender.append(res_df)  # TODO 注意 !!! append 的 df columns 顺序必须和建表时的顺序一致
+        print(f"[Dolphindb] Write len:{len(res_df)} data to db cost:{time.perf_counter() - start_time:.2f}s")
+
+        res_dict.clear()
 
     def download_all(self):
         start_time = time.perf_counter()

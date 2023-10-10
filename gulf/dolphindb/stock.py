@@ -7,9 +7,9 @@
 import datetime
 from typing import Union
 
-from gulf.dolphindb.config import DfsDbPath
 from gulf.dolphindb.base import Dolphindb
 from gulf.dolphindb.const import Engine
+from gulf.dolphindb.db_path import DfsDbPath
 
 
 class StockDB(Dolphindb):

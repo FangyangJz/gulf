@@ -84,7 +84,7 @@ def update_res_dict_thread(df: pd.DataFrame, start_date_str: str, end_date_str: 
         # if idx < 40:
         #     continue
         code, name = item[0], item[1]
-        # get_stock_hist_df(code, name, start_date_str, end_date_str, res_dict)
+        get_stock_hist_df(res_dict, code, name, start_date_str, end_date_str)
         t = threading.Thread(target=get_stock_hist_df, args=(res_dict, code, name, start_date_str, end_date_str))
         t.start()
         t_list.append(t)

@@ -4,9 +4,9 @@
 # @Author   : Fangyang
 # @Software : PyCharm
 
-
-AKSHARE_CRAWL_CONCURRENT_LIMIT = 100
-AKSHARE_CRAWL_STOP_INTERVEL = 5  # seconds
+#TODO
+AKSHARE_CRAWL_CONCURRENT_LIMIT = 50
+AKSHARE_CRAWL_STOP_INTERVEL = 30  # seconds
 
 
 if __name__ == '__main__':

@@ -20,12 +20,14 @@ def bond_daily_table_schema() -> Schema:
     bond_daily_cols_type_dict = {
         'jj_code': DolType.SYMBOL, 'trade_date': DolType.NANOTIMESTAMP,
         'open': DolType.DOUBLE, 'high': DolType.DOUBLE, 'low': DolType.DOUBLE, 'close': DolType.DOUBLE,
-        'volume': DolType.DOUBLE,
+        'amount': DolType.DOUBLE, 'volume': DolType.DOUBLE,
+        'stock_open': DolType.DOUBLE, 'stock_high': DolType.DOUBLE, 'stock_low': DolType.DOUBLE,
+        'stock_close': DolType.DOUBLE, 'stock_amount': DolType.DOUBLE, 'stock_volume': DolType.DOUBLE,
         'bond_code': DolType.SYMBOL, 'bond_name': DolType.SYMBOL,
         'stock_code': DolType.SYMBOL, 'stock_name': DolType.SYMBOL,
         'bond_scale': DolType.DOUBLE, 'listing_date': DolType.NANOTIMESTAMP,
-        'market': DolType.SYMBOL,
-        'bond_value': DolType.DOUBLE, 'trans_stock_value': DolType.DOUBLE, 'bond_premium': DolType.DOUBLE,
+        'market': DolType.SYMBOL, 'trans_stock_value': DolType.DOUBLE,
+        # 'bond_value': DolType.DOUBLE,  'bond_premium': DolType.DOUBLE,
         'trans_stock_premium': DolType.DOUBLE, 'duallow': DolType.DOUBLE
     }
 
