@@ -5,7 +5,7 @@
 # @Software : PyCharm
 
 import datetime
-from typing import Union, Dict
+from typing import Union, Dict, List
 
 import pandas as pd
 from tqdm import tqdm
@@ -70,7 +70,7 @@ class StockDB(Dolphindb):
 
     def update_stock_nfq_daily_table_by_reader(self, offset: int = 0):
         """
-        读取本地数据, 写入db
+        读取本地数据, 写入db, mootdx reader 目前代码不涵盖 bj 路径, 故没有北交所数据
         :param offset: 大于等于0表示将全部数据写入db, -2 表示数据最近2天数据写入db
         :return:
         """
@@ -102,8 +102,69 @@ class StockDB(Dolphindb):
         trade_calender = self.get_dimension_table_df(TradeCalenderTable, from_db=False)
         stock_basic_df = self.get_dimension_table_df(StockBasicTable, from_db=False)
 
+    def get_stock_daily_table_df(
+            self, table_name: str = "temp_table",
+            start_date: str = "2005.01.01",
+            end_date: str = "",
+            where_filter: str = "",
+            market: str = "S",
+            is_indclass_onehot: bool = False,
+            end_sql: str = ""
+    ) -> pd.DataFrame:
+        """
+
+        :param table_name:
+        :param start_date:
+        :param end_date:
+        :param where_filter:
+        :param market: 默认值为 'S' 表示排除北交所, 'SH' 表示沪市, 'SZ'表示深市, 'B' 表示北交所, '' 表示全部,
+        :param is_indclass_onehot: 是否行业 onehot encode
+        :param end_sql:
+        :return:
+        """
+
+        dt = ""
+        if start_date:
+            dt += f"&& trade_date>={start_date} "
+        if end_date:
+            dt += f"&& trade_date<={end_date} "
+
+        where_filter = "," + where_filter if where_filter else ""
+
+        res = f"""
+            use ta;
+            db_path = "{stock_nfq_daily_table.db_path}";
+            db = database(db_path);
+            t = loadTable(db, "{stock_nfq_daily_table.name}");
+
+            def get_raw_data_table(market='SH'){{
+                return  select *, cumwavg(rowAvg(close, high, low), volume) as vwap  
+                from t 
+                where jj_code like concat(market, '%'),  
+                jj_code not like '%.68%', jj_code not like '%.30%', name not like '%ST%'  
+                {dt} {where_filter}  
+                context by jj_code;
+            }}
+
+            {table_name} = get_raw_data_table(market='{market}');  // 排除北交所
+            {f'{table_name} = oneHot({table_name}, `industry);' if is_indclass_onehot else ''}
+            
+            {end_sql}
+            {table_name};
+            """
+
+        return self.session.run(res)
+
 
 if __name__ == '__main__':
     db = StockDB()
     # db.update_dimension_tables()
-    db.update_stock_nfq_daily_table_by_reader(offset=-1)
+    # db.update_stock_nfq_daily_table_by_reader(offset=-1)
+
+    df0 = db.get_stock_daily_table_df(start_date='2023.10.10', is_indclass_onehot=True)
+    df1 = db.get_stock_daily_table_df(start_date='2023.10.10', market='S')
+    df2 = db.get_stock_daily_table_df(start_date='2023.10.10', market='')
+    df3 = db.get_stock_daily_table_df(start_date='2023.10.10', market='B')
+    df4 = db.get_stock_daily_table_df(start_date='2023.10.10', market='SH')
+    df5 = db.get_stock_daily_table_df(start_date='2023.10.10', market='SZ')
+    print(1)
