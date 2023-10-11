@@ -76,12 +76,14 @@ class BondDB(Dolphindb):
 
         self.save_res_dict_to_db_table(partition_table=bond_daily_table, res_dict=res_dict)
 
-    def read_bond_daily_table(self):
+    def update_bond_daily_table_by_reader(self, offset: int = 0):
         """
         优点: 读取速度快, 交易中的债几乎不存在缺失问题
         缺点:
             1. 退市债没有数据, 转股溢价率是本地计算, 如果存在复权问题, 可能会存在问题, 需要后续确认,
             2. 没有纯债价值和纯债溢价率
+
+        :param offset: 大于等于0表示将全部数据写入db, -2 表示数据最近2天数据写入db
         """
         from mootdx.reader import Reader
 
@@ -95,6 +97,8 @@ class BondDB(Dolphindb):
             # price/10, volume*1000, amount keep
             price_cols = ['open', 'high', 'low', 'close']
             bond_daily_df = reader.daily(symbol=bond_code)
+            bond_daily_df = bond_daily_df if offset >= 0 else bond_daily_df.iloc[offset:]
+
             if bond_daily_df.empty:
                 continue
             bond_daily_df[price_cols] = bond_daily_df[price_cols] / 10
@@ -105,6 +109,7 @@ class BondDB(Dolphindb):
 
             # amount = price * volume * 100
             stock_daily_df = reader.daily(symbol=stock_code)
+            stock_daily_df = stock_daily_df if offset >= 0 else stock_daily_df.iloc[offset:]
             stock_daily_df.columns = [f'stock_{c}' for c in stock_daily_df.columns]
 
             # 转股溢价率=可转债价格/转股价值-1，转股价值=可转债面值/转股价*正股价。
@@ -137,13 +142,13 @@ class BondDB(Dolphindb):
 if __name__ == '__main__':
     db = BondDB()
 
-    # db.update_dimension_tables()
-    bond_basic_df = db.get_dimension_table_df(BondBasicTable, from_db=True)
+    db.update_dimension_tables()
+    # bond_basic_df = db.get_dimension_table_df(BondBasicTable, from_db=True)
 
     # Note: BondBasicTable 从网上获取的全部转债, 
     # 如果包含退市债, 历史日数据 47 万
     # 如果不包含退市债, 历史日数据 24 万
     # sina 网络的接口有限速, 当前配置可能需要调整
-    db.download_bond_daily_table()
+    # db.download_bond_daily_table()
 
-    # db.read_bond_daily_table()
+    db.update_bond_daily_table_by_reader(offset=-1)

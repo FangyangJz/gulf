@@ -68,7 +68,12 @@ class StockDB(Dolphindb):
         db=database('{DfsDbPath.stock_daily}', RANGE, yearRange, engine=`{self.engine.value})
         """
 
-    def read_stock_daily_table(self):
+    def update_stock_nfq_daily_table_by_reader(self, offset: int = 0):
+        """
+        读取本地数据, 写入db
+        :param offset: 大于等于0表示将全部数据写入db, -2 表示数据最近2天数据写入db
+        :return:
+        """
         from mootdx.reader import Reader
 
         reader = Reader.factory(market='std', tdxdir='C:/new_tdx')
@@ -79,12 +84,14 @@ class StockDB(Dolphindb):
             stock_code = row['代码']
 
             stock_daily_df = reader.daily(symbol=stock_code)
+            stock_daily_df = stock_daily_df if offset >= 0 else stock_daily_df.iloc[offset:]
             if stock_daily_df.empty:
                 continue
 
             stock_daily_df['jj_code'] = row['jj_code']
             stock_daily_df['name'] = row['名称']
             stock_daily_df['industry'] = row['所处行业']
+
             res_dict[stock_code] = stock_daily_df
 
         df = pd.concat(res_dict.values()).reset_index(names=['trade_date'])
@@ -98,5 +105,5 @@ class StockDB(Dolphindb):
 
 if __name__ == '__main__':
     db = StockDB()
-    db.update_dimension_tables()
-    db.read_stock_daily_table()
+    # db.update_dimension_tables()
+    db.update_stock_nfq_daily_table_by_reader(offset=-1)
