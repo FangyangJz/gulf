@@ -5,7 +5,7 @@
 # @Software : PyCharm
 
 import datetime
-from typing import Union
+from typing import Union, Dict
 
 import pandas as pd
 from tqdm import tqdm
@@ -35,18 +35,19 @@ class StockDB(Dolphindb):
             host=host, port=port, username=username, password=password,
             engine=engine, enable_async=enable_async
         )
-        self.clear_db = clear_db
         self.start_datetime = datetime.datetime(year=self.start_year, month=1, day=1)
 
-        self.init_db_path_dict = {
+        self.init_db(clear=clear_db)
+
+        self.partition_tables = [stock_nfq_daily_table, ]
+        [self._create_table(table=table) for table in self.partition_tables]
+
+    @property
+    def db_path_init_script_dict(self) -> Dict[str, str]:
+        return {
             DfsDbPath.stock_daily_code: self.init_daily_code_db_script,
             DfsDbPath.stock_daily: self.init_daily_db_script,
         }
-
-        self.init_db(init_db_path_dict=self.init_db_path_dict, clear=clear_db)
-
-        self.partition_tables = [stock_nfq_daily_table]
-        [self._create_table(table=table) for table in self.partition_tables]
 
     @property
     def init_daily_code_db_script(self):
@@ -97,5 +98,5 @@ class StockDB(Dolphindb):
 
 if __name__ == '__main__':
     db = StockDB()
-    # db.update_dimension_tables()
+    db.update_dimension_tables()
     db.read_stock_daily_table()
