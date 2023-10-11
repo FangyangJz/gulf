@@ -67,7 +67,7 @@ class BondDB(Dolphindb):
 
         res_dict = dict()
         update_bond_daily_res_dict_thread(
-            bond_basic_df=self.get_dimension_table_df(BondBasicTable, from_db=False),
+            bond_basic_df=self.get_dimension_table_df(BondBasicTable, from_db=True),
             res_dict=res_dict
         )
 
@@ -83,7 +83,7 @@ class BondDB(Dolphindb):
         from mootdx.reader import Reader
 
         reader = Reader.factory(market='std', tdxdir='C:/new_tdx')
-        bond_basic_df = self.get_dimension_table_df(BondBasicTable, from_db=False)
+        bond_basic_df = self.get_dimension_table_df(BondBasicTable, from_db=True)
 
         res_dict = dict()
         for idx, row in tqdm(bond_basic_df.iterrows()):
@@ -127,6 +127,7 @@ class BondDB(Dolphindb):
         self.save_res_dict_to_db_table(partition_table=bond_daily_table, res_dict={'df': df})
 
     def update_dimension_tables(self):
+        bond_basic_df = self.get_dimension_table_df(BondBasicTable, from_db=False)
         bond_redeem_df = self.get_dimension_table_df(BondRedeemTable, from_db=False)
 
 
@@ -134,6 +135,7 @@ if __name__ == '__main__':
     db = BondDB()
 
     db.update_dimension_tables()
+    bond_basic_df = db.get_dimension_table_df(BondBasicTable, from_db=True)
 
     # Note: BondBasicTable 从网上获取的全部转债, 
     # 如果包含退市债, 历史日数据 47 万

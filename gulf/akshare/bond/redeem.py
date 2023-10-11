@@ -1,5 +1,6 @@
 from typing import Tuple
 
+import numpy as np
 import pandas as pd
 import requests
 
@@ -104,6 +105,16 @@ def get_bond_cb_redeem_jsl_df() -> Tuple[pd.DataFrame, pd.DataFrame]:
         labels=['正股价', '转股价'],
         axis=1
     )
+    bond_cb_redeem_jsl_df['强赎天计数'] = bond_cb_redeem_jsl_df['强赎天计数'].replace(
+        to_replace=r'\<.*\>',
+        value="",
+        regex=True
+    )
+    bond_cb_redeem_jsl_df['不安全天数'] = (
+        bond_cb_redeem_jsl_df['强赎天计数']
+        .apply(lambda x: int(x.split('/')[0]) if '/' in x else 30)
+    )
+
     bond_cb_redeem_jsl_df['强赎状态'] = bond_cb_redeem_jsl_df['强赎状态'].replace(
         to_replace=r'^\s*$',
         value="不强赎",
