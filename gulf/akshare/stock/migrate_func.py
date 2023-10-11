@@ -216,6 +216,7 @@ def stock_zh_a_spot_em() -> pd.DataFrame:
         else:
             temp_df[col] = pd.to_numeric(temp_df[col], errors="coerce")
 
+    # 数字开头的列名在dolphindb 查询的时候会有问题, 此处增加字母开头
     temp_df = temp_df[
         [
             "代码", "名称",
@@ -228,7 +229,7 @@ def stock_zh_a_spot_em() -> pd.DataFrame:
             "报告期", "总股本", "已流通股份", "总市值", "流通市值",
             "所处行业", "上市时间"
         ]
-    ]
+    ].rename(columns={'5分钟涨跌': 'A5分钟涨跌', '60日涨跌幅': 'A60日涨跌幅'})
 
     return temp_df
 

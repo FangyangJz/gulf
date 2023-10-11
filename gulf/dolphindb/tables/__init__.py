@@ -10,7 +10,7 @@ from gulf.dolphindb.tables.dimension.stock_tables import StockBasicTable, TradeC
 
 from gulf.dolphindb.tables.partition.stock_tables import (
     stock_daily_table, hk_hold_table, stock_fin_table,
-    stock_pingji_table, stock_moneyflow_daily_table, industry_moneyflow_daily_table
+    stock_pingji_table, stock_moneyflow_daily_table, industry_moneyflow_daily_table, stock_nfq_daily_table
 )
 
 from gulf.dolphindb.tables.partition.bond_tables import bond_daily_table
@@ -22,6 +22,7 @@ db_table_map = {
     DfsDbPath.stock_basic: [StockBasicTable],
     # DfsDbPath.stock_index: [IndexHS300MembersTable, IndexHS300DailyTable],
     DfsDbPath.stock_daily_code: [
+        stock_nfq_daily_table,
         stock_daily_table,
         hk_hold_table,
         stock_fin_table,

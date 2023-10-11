@@ -1,0 +1,15 @@
+db1 = database("dfs://stock_daily_code");
+
+table0_name = "stock_nfq_daily_table"
+table0 = loadTable(db1, table0_name);
+
+select top 10 * from table0 order by trade_date desc;
+
+select top 10 * from table0 where jj_code='SHSE.600101';
+select top 10 * from table0 where jj_code='SHSE.600101', trade_date<=2020.09.01 order by trade_date desc;
+select count(*) from table0;
+select * from table0 where jj_code=`SZSE.000589 and trade_date=2005.01.04;
+
+select jj_code, trade_date from table0 group by jj_code, trade_date having count(*)>1;
+
+clearAllCache()

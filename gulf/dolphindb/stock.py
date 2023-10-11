@@ -7,10 +7,14 @@
 import datetime
 from typing import Union
 
+import pandas as pd
+from tqdm import tqdm
+
 from gulf.dolphindb.base import Dolphindb
 from gulf.dolphindb.const import Engine
 from gulf.dolphindb.db_path import DfsDbPath
 from gulf.dolphindb.tables import TradeCalenderTable, StockBasicTable
+from gulf.dolphindb.tables.partition.stock_tables import stock_nfq_daily_table
 
 
 class StockDB(Dolphindb):
@@ -41,6 +45,9 @@ class StockDB(Dolphindb):
 
         self.init_db(init_db_path_dict=self.init_db_path_dict, clear=clear_db)
 
+        self.partition_tables = [stock_nfq_daily_table]
+        [self._create_table(table=table) for table in self.partition_tables]
+
     @property
     def init_daily_code_db_script(self):
         return f"""
@@ -60,6 +67,29 @@ class StockDB(Dolphindb):
         db=database('{DfsDbPath.stock_daily}', RANGE, yearRange, engine=`{self.engine.value})
         """
 
+    def read_stock_daily_table(self):
+        from mootdx.reader import Reader
+
+        reader = Reader.factory(market='std', tdxdir='C:/new_tdx')
+        stock_basic_df = self.get_dimension_table_df(StockBasicTable, from_db=True)
+
+        res_dict = dict()
+        for idx, row in tqdm(stock_basic_df.iterrows()):
+            stock_code = row['代码']
+
+            stock_daily_df = reader.daily(symbol=stock_code)
+            if stock_daily_df.empty:
+                continue
+
+            stock_daily_df['jj_code'] = row['jj_code']
+            stock_daily_df['name'] = row['名称']
+            stock_daily_df['industry'] = row['所处行业']
+            res_dict[stock_code] = stock_daily_df
+
+        df = pd.concat(res_dict.values()).reset_index(names=['trade_date'])
+        res_dict.clear()
+        self.save_res_dict_to_db_table(partition_table=stock_nfq_daily_table, res_dict={'df': df})
+
     def update_dimension_tables(self):
         trade_calender = self.get_dimension_table_df(TradeCalenderTable, from_db=False)
         stock_basic_df = self.get_dimension_table_df(StockBasicTable, from_db=False)
@@ -67,4 +97,5 @@ class StockDB(Dolphindb):
 
 if __name__ == '__main__':
     db = StockDB()
-    db.update_dimension_tables()
+    # db.update_dimension_tables()
+    db.read_stock_daily_table()

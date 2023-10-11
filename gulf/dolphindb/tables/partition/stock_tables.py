@@ -7,8 +7,16 @@
 from gulf.dolphindb.db_path import DfsDbPath
 from gulf.dolphindb.tables.partition.schema import industry_moneyflow_daily_table_schema, index_daily_table_schema, \
     hk_hold_table_schema
-from gulf.dolphindb.tables.partition.stock_schema import stock_daily_table_schema, stock_moneyflow_daily_table_schema
+from gulf.dolphindb.tables.partition.stock_schema import stock_daily_table_schema, stock_moneyflow_daily_table_schema, \
+    stock_nfq_daily_table_schema
 from gulf.dolphindb.tables.partition.table import PartitionTable
+
+
+stock_nfq_daily_table = PartitionTable(
+    name="stock_nfq_daily_table",
+    db_path=DfsDbPath.stock_daily_code,
+    schema=stock_nfq_daily_table_schema()
+)
 
 
 stock_daily_table = PartitionTable(

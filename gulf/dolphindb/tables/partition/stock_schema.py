@@ -8,6 +8,30 @@ from gulf.dolphindb.const import DolType
 from gulf.dolphindb.tables.partition.schema import new_schema, Schema
 
 
+def stock_nfq_daily_table_schema() -> Schema:
+    cols_type_dict = {'jj_code': DolType.SYMBOL, }
+
+    # tushare daily 数据不全, 这里使用akshare数据
+    daily_cols_type_dict = {
+        'trade_date': DolType.NANOTIMESTAMP,
+        'open': DolType.DOUBLE, 'high': DolType.DOUBLE,
+        'low': DolType.DOUBLE, 'close': DolType.DOUBLE,
+        'amount': DolType.DOUBLE, 'volume': DolType.DOUBLE,
+    }
+
+    custom_dict = {'name': DolType.SYMBOL, 'industry': DolType.SYMBOL}
+
+    cols_type_dict.update(daily_cols_type_dict)
+    cols_type_dict.update(custom_dict)
+
+    columns_list = [
+        list(daily_cols_type_dict.keys()),
+        list(custom_dict.keys()),
+    ]
+
+    return new_schema(cols_type_dict, columns_list)
+
+
 def stock_daily_table_schema() -> Schema:
     cols_type_dict = {'jj_code': DolType.SYMBOL, }
 
