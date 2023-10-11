@@ -4,23 +4,37 @@ gulf
 <img src="https://github.com/FangyangJz/gulf/assets/19723117/2d2a06b7-e4f5-429a-b87a-1b850070d033?raw=true" width="50%">
 </div>
 
-## 项目描述
-基于 Dolphindb 封装的金融数据应用
+[简体中文](README_CN.md)
 
-## 项目说明
+## Description
 
+**`gulf`** is an open-source integrated finance data source and database application on top of [DolphinDB](https://www.dolphindb.com/) and [akshare](https://github.com/akfamily/akshare).
 
-使用 poetry 作为依赖管理, conda 作为虚拟环境管理 
+### Installation
 
-* pycharm 中 poetry environment 创建虚拟环境, 由于系统非英文编码, 导致创建失败, 故使用 conda 作为虚拟环境管理, 作者使用 python 3.9 作为开发环境.
+You can install the latest stable version from pip using:
+```
+pip install gulf
+```
+If you plan to develop gulf yourself, or want to be on the cutting edge, you can use an editable install:
+```bash
+git clone https://github.com/FangyangJz/gulf.git
+pip install -e .
+```
 
-* 如果按照 poetry 官方手册进行操作, 创建了多余的 venv, 删除即可. 请检查如下位置 (注意隐藏路径):
+### About development environment
+
+Use `poetry` as dependency management and `conda` as virtual environment management.
+
+* In `PyCharm` settings, `poetry` venv creation may meet error, because the OS system is not native English. So `conda` was used as the virtual environment management, and author used `python` 3.9 version.
+
+* If you follow the official `poetry` manual and create a redundant venv, just delete it. Check the following locations (note hidden paths):
 
     > C:\Users\fangy\AppData\Local\pypoetry\Cache\virtualenvs
 
 
-* 如果没有自动切换虚拟环境, 手动命令切换:
+* If the virtual environment is not automatically activated, manually switch:
     ```
-    $ conda activate your_venv_name
+    conda activate your_venv_name
     ```
-    切换到虚拟环境后, 命令行执行 `poetry update/init/install/add` 等命令, 可以参考该 [stack overflow 链接](https://stackoverflow.com/questions/70851048/does-it-make-sense-to-use-conda-poetry)
+    After activate the virtual environment, `poetry update/init/install/add` command is executed on the shell. [Stack overflow link](https://stackoverflow.com/questions/70851048/does-it-make-sense-to-use-conda-poetry)

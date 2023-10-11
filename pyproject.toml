@@ -1,9 +1,13 @@
 [tool.poetry]
 name = "gulf"
 version = "0.1.0"
-description = ""
+description = "An open-source integrated finance data source and database application on top of DolphinDB and akshare."
 authors = ["fangyang_gpu <fangyang.jing@hotmail.com>"]
 readme = "README.md"
+license = "Apache-2.0"
+maintainers = [
+    "Fangyang <fangyang.jing@hotmail.com>",
+]
 
 [tool.poetry.dependencies]
 python = "^3.8"
