@@ -4,7 +4,8 @@ import dolphindb as ddb
 import dolphindb.settings as keys
 import pandas as pd
 
-from typing import Dict, Type
+from typing import Dict, Type, Union
+from loguru import logger
 
 from gulf.dolphindb.db_path import DfsDbPath
 from gulf.dolphindb.const import DolType_2_np_dtype_dict, Engine
@@ -28,7 +29,7 @@ class Dolphindb:
         """
         self.host = host if host else get_lan_ip()  # 这里注意clash不能使用TUN mode, 否则获取的ip地址不是局域网ip
         self.port = port
-        print(f"[Dolphindb] Connect to {self.host}:{self.port}")
+        logger.info(f"[Dolphindb] Connect to {self.host}:{self.port}")
 
         self.username = username
         self.password = password
@@ -56,7 +57,7 @@ class Dolphindb:
             for db_path in self.db_path_init_script_dict.keys():
                 if self.session.existsDatabase(db_path):
                     self.session.dropDatabase(db_path)
-                    print(f"[Dolphindb] Drop database: {db_path}")
+                    logger.info(f"[Dolphindb] Drop database: {db_path}")
 
         for db_path, script in self.db_path_init_script_dict.items():
             if not self.session.existsDatabase(db_path):
@@ -87,17 +88,19 @@ class Dolphindb:
 
         if not self.session.existsTable(dbUrl=db_path, tableName=table_name):
             self.session.run(create_table_script)
-            print(f"[Dolphindb] Create table db_path:{db_path}, table_name: {table_name}")
+            logger.info(f"[Dolphindb] Create table db_path:{db_path}, table_name: {table_name}")
         else:
-            print(f"[Dolphindb] Table exist. No create, db_path:{db_path}, table_name: {table_name}")
+            logger.info(f"[Dolphindb] Table exist. No create, db_path:{db_path}, table_name: {table_name}")
 
-    def get_dimension_table_df(self, dim_table_cls: Type[DimensionTable], from_db: bool = True):
+    def get_dimension_table_df(
+            self, dim_table_cls: Type[DimensionTable], from_db: bool = True
+    ) -> Union[pd.DataFrame, None]:
         if from_db:
             try:
                 df = self.session.loadTable(dim_table_cls.name, dim_table_cls.db_path).toDF()
                 return df
-            except Exception as e:
-                print(e)
+            except Exception:
+                logger.exception(f'Dimension table: {dim_table_cls.name}. DB path: {dim_table_cls.db_path}')
                 return None
         else:
             table = dim_table_cls()
@@ -115,7 +118,7 @@ class Dolphindb:
         table_name = dim_table.name
 
         if dim_table.df.empty:
-            print(f"[Dolphindb] Fail to save dimension table, {table_name} to {db_path}, table.df is empty")
+            logger.error(f"[Dolphindb] Fail to save dimension table, {table_name} to {db_path}, table.df is empty")
             return
 
         if self.session.existsTable(dbUrl=db_path, tableName=table_name):
@@ -138,7 +141,7 @@ class Dolphindb:
 
         re = self.session.loadTable(tableName=table_name, dbPath=db_path)
         re.append(table=table)
-        print(f"[Dolphindb] Success save dimension table, {table_name} to {db_path}")
+        logger.success(f"[Dolphindb] Success save dimension table, {table_name} to {db_path}")
 
     def save_res_dict_to_db_table(
             self, partition_table: PartitionTable, res_dict: Dict, partition_col: str = 'jj_code'
@@ -170,7 +173,7 @@ class Dolphindb:
 
         start_time = time.perf_counter()
         appender.append(res_df)  # TODO 注意 !!! append 的 df columns 顺序必须和建表时的顺序一致
-        print(f"[Dolphindb] Write len:{len(res_df)} data to db cost:{time.perf_counter() - start_time:.2f}s")
+        logger.success(f"[Dolphindb] Write len:{len(res_df)} data to db, cost:{time.perf_counter() - start_time:.2f}s")
 
         res_dict.clear()
 

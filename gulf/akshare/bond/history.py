@@ -6,12 +6,13 @@
 
 import threading
 import time
-from datetime import datetime
-from typing import Dict
-
 import numpy as np
 import pandas as pd
+
+from typing import Dict
+from datetime import datetime
 from tqdm import tqdm
+from loguru import logger
 
 from gulf.akshare.const import AKSHARE_CRAWL_CONCURRENT_LIMIT, AKSHARE_CRAWL_STOP_INTERVEL
 from gulf.akshare.bond.cov_value_analysis import bond_zh_cov_value_analysis
@@ -50,14 +51,14 @@ def get_bond_daily_df(
         # 2. 获取单只债券 ohlcv 全部历史信息
         bond_zh_hs_cov_daily_df = ak.bond_zh_hs_cov_daily(symbol=f"{market_str}{bond_code}")
     except Exception as e:
-        print(f"[get_bond_daily_df] {market_str}{bond_code},  retry change market")
-        print(e)
+        logger.warning(f"[bond_zh_hs_cov_daily] {market_str}{bond_code} {bond_name},  retry change market. {e}")
         market_str = "sz" if market == "SHSE" else "sh"
         try:
             bond_zh_hs_cov_daily_df = ak.bond_zh_hs_cov_daily(symbol=f"{market_str}{bond_code}")
+            logger.success(f"[bond_zh_hs_cov_daily] {market_str}{bond_code} {bond_name},  retry change market pass")
         except Exception as e1:
-            print(f"[get_bond_daily_df] {market_str}{bond_code},  retry change market still fail.")
-            print(e1)
+            logger.error(
+                f"[bond_zh_hs_cov_daily] {market_str}{bond_code} {bond_name},  retry change market fail. {e1}")
             return
 
     bond_zh_hs_cov_daily_df['bond_code'] = bond_code
@@ -85,7 +86,7 @@ def get_bond_daily_df(
             }) \
             .drop(["收盘价", 'bond_value', 'bond_premium'], axis=1)
     except Exception as e:
-        print(f"[bond_zh_cov_value_analysis] {bond_code}", e)
+        logger.error(f"[bond_zh_cov_value_analysis] {bond_code} {bond_name}. {e}")
         return
 
         # 合并历史 ohclv 与 溢价率 表
@@ -118,13 +119,12 @@ def get_bond_daily_df(
         )
         nfq_df = nfq_df[nfq_df_columns_dict.keys()].rename(columns=nfq_df_columns_dict)
     except Exception as e:
-        print(f"[stock_zh_a_hist] {stock_code} may be limited. ", e)
+        logger.error(f"[stock_zh_a_hist] {stock_code} {stock_name} may be limited. {e}")
         return
 
     bond_df = pd.concat([bond_df, nfq_df], axis=1)
 
     res_dict[bond_code] = bond_df
-    # print(f"bond_df pass, length:{bond_df.shape}")
     return bond_df
 
 
@@ -141,7 +141,10 @@ def update_bond_daily_res_dict_thread(bond_basic_df: pd.DataFrame, res_dict: Dic
         market = row['market']
 
         # For debug
-        # df = get_bond_daily_df(bond_code, bond_name, bond_scale, listing_date, stock_code, stock_name, market, res_dict)
+        # df = get_bond_daily_df(
+        #     bond_code, bond_name, bond_scale, listing_date,
+        #     stock_code, stock_name, market, res_dict
+        # )
 
         t = threading.Thread(
             target=get_bond_daily_df,
@@ -160,8 +163,10 @@ def update_bond_daily_res_dict_thread(bond_basic_df: pd.DataFrame, res_dict: Dic
 
     if t_list:
         [t.join() for t in t_list]
-
-    print(f"threading cost: {time.perf_counter() - start_time:.2f}s")
+    logger.success(
+        f"Items: {len(res_dict)}/{len(bond_basic_df)}. "
+        f"Threading time cost: {time.perf_counter() - start_time:.2f}s"
+    )
 
 
 def get_bond_index_daily():
@@ -209,7 +214,10 @@ if __name__ == '__main__':
 
     df1, df2 = get_bond_basic_df(data_delist_status='exclude')
     res_dict = dict()
-    update_bond_daily_res_dict_thread(bond_basic_df=df1.iloc[:70], res_dict=res_dict)
-    print(res_dict)
+    update_bond_daily_res_dict_thread(
+        bond_basic_df=df1,  # .iloc[:70],
+        res_dict=res_dict
+    )
+    print(1)
 
     df = get_bond_index_daily()

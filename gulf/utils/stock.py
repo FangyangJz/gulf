@@ -70,5 +70,30 @@ def get_stock_market(symbol: str = '', string: bool = False) -> Union[int, str]:
     return market
 
 
+def get_stock_ch_market(code: str):
+    if code[:3] in ['600', '601', '602', '603', '605']:
+        return '沪A股主板'
+    elif code[:3] in ['000', '001', '003']:
+        return '深A股主板'
+    elif code[:3] == '002':
+        return '中小板'
+    elif code[:2] == '30':
+        return '创业板'
+    elif code[:3] == '688':
+        return '科创板'
+    elif code[0] == '4':
+        return '三板'
+    elif code[0] == '8':
+        return '新三板'
+    elif code[:3] in '900':
+        return '沪B股'
+    elif code[:3] in '200':
+        return '深B股'
+    elif code[:3] == '730':
+        return '新股申购'
+    elif code[:3] in ['700', '080']:
+        return '配股'
+
+
 if __name__ == '__main__':
     pass

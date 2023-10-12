@@ -6,13 +6,15 @@
 
 import threading
 import time
-from typing import Dict
-
 import pandas as pd
+
+from typing import Dict
 from tqdm import tqdm
+from loguru import logger
 
 from gulf.akshare.const import AKSHARE_CRAWL_CONCURRENT_LIMIT, AKSHARE_CRAWL_STOP_INTERVEL
 from gulf.akshare.stock.migrate_func import stock_zh_a_hist
+from gulf.utils.stock import get_stock_ch_market
 
 
 def get_stock_hist_df(
@@ -46,26 +48,30 @@ def get_stock_hist_df(
         '涨跌额': "pct_amount", '换手率': "turnover",
         '振幅': 'amp'
     }
-    hfq_df = stock_zh_a_hist(
-        symbol=code, period="daily",
-        start_date=start_date, end_date=end_date,
-        adjust="hfq"
-    )
+    try:
+        hfq_df = stock_zh_a_hist(
+            symbol=code, period="daily",
+            start_date=start_date, end_date=end_date,
+            adjust="hfq"
+        )
 
-    if hfq_df.empty:
-        print(f"{__file__} : {code} hfq dataframe is empty")
-        return
+        if hfq_df.empty:
+            logger.error(f"[stock_zh_a_hist]{code} {name} hfq dataframe is empty. Maybe limited.")
+            return pd.DataFrame()
 
-    hfq_df = hfq_df[hfq_df_columns_dict.keys()].rename(columns=hfq_df_columns_dict)
+        hfq_df = hfq_df[hfq_df_columns_dict.keys()].rename(columns=hfq_df_columns_dict)
 
-    nfq_df_columns_dict = {'开盘': "open", '收盘': "close", '最高': "high", '最低': "low"}
-    nfq_df = stock_zh_a_hist(
-        symbol=code, period="daily",
-        start_date=start_date, end_date=end_date,
-        adjust=""
-    )[nfq_df_columns_dict.keys()].rename(
-        columns=nfq_df_columns_dict
-    )
+        nfq_df_columns_dict = {'开盘': "open", '收盘': "close", '最高': "high", '最低': "low"}
+        nfq_df = stock_zh_a_hist(
+            symbol=code, period="daily",
+            start_date=start_date, end_date=end_date,
+            adjust=""
+        )[nfq_df_columns_dict.keys()].rename(
+            columns=nfq_df_columns_dict
+        )
+    except Exception as e:
+        logger.error(f'[stock_zh_a_hist]{code} {name}. {e}')
+        return pd.DataFrame()
 
     df = pd.concat([hfq_df, nfq_df], axis=1)
 
@@ -81,10 +87,13 @@ def update_res_dict_thread(df: pd.DataFrame, start_date_str: str, end_date_str: 
     start_time = time.perf_counter()
     t_list = []
     for idx, item in tqdm(df.iterrows(), desc="Get stock hist df from akshare"):
-        # if idx < 40:
-        #     continue
         code, name = item[0], item[1]
-        get_stock_hist_df(res_dict, code, name, start_date_str, end_date_str)
+
+        ch_market = get_stock_ch_market(code)
+        if ch_market not in ['沪A股主板', '深A股主板', '中小板', '创业板']:
+            logger.info(f'{code} {name} 是 {ch_market} 股票, 跳过')
+            continue
+
         t = threading.Thread(target=get_stock_hist_df, args=(res_dict, code, name, start_date_str, end_date_str))
         t.start()
         t_list.append(t)
@@ -97,7 +106,7 @@ def update_res_dict_thread(df: pd.DataFrame, start_date_str: str, end_date_str: 
     if t_list:
         [t.join() for t in t_list]
 
-    print(f"threading cost: {time.perf_counter() - start_time:.2f}s")
+    logger.success(f"Items: {len(res_dict)}/{len(df)}. Threading cost: {time.perf_counter() - start_time:.2f}s")
 
 
 if __name__ == '__main__':
