@@ -141,7 +141,7 @@ class Dolphindb:
 
         re = self.session.loadTable(tableName=table_name, dbPath=db_path)
         re.append(table=table)
-        logger.success(f"[Dolphindb] Success save dimension table, {table_name} to {db_path}")
+        logger.success(f"[Dolphindb] Save dimension table, {table_name} to {db_path}")
 
     def save_res_dict_to_db_table(
             self, partition_table: PartitionTable, res_dict: Dict, partition_col: str = 'jj_code'
