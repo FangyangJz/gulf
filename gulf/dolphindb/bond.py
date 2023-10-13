@@ -130,7 +130,7 @@ class BondDB(Dolphindb):
 
             res_dict[bond_code] = dd
 
-        df = pd.concat(res_dict.values()).reset_index(names=['trade_date'])
+        df = pd.concat(res_dict.values()).reset_index().rename(columns={'date': 'trade_date'})
         res_dict.clear()
         self.save_res_dict_to_db_table(partition_table=bond_daily_table, res_dict={'df': df})
 
@@ -237,7 +237,7 @@ class BondDB(Dolphindb):
 if __name__ == '__main__':
     db = BondDB()
 
-    # db.update_dimension_tables()
+    db.update_dimension_tables()
     # bond_basic_df = db.get_dimension_table_df(BondBasicTable, from_db=True)
 
     # Note: BondBasicTable 从网上获取的全部转债, 
@@ -246,7 +246,7 @@ if __name__ == '__main__':
     # sina 网络的接口有限速, 当前配置可能需要调整
     # db.update_bond_daily_table_by_akshare()
 
-    # db.update_bond_daily_table_by_reader(offset=-1)
+    db.update_bond_daily_table_by_reader(offset=-1)
 
-    df = db.get_bond_daily_table_df(start_date='2023.10.10', is_indclass_onehot=True)
+    # df = db.get_bond_daily_table_df(start_date='2023.10.10', is_indclass_onehot=True)
     print(1)
