@@ -202,7 +202,7 @@ class BondDB(Dolphindb):
                 t = loadTable(db, "{bond_daily_table.name}");
 
                 bond_table = select jj_code, bond_name, stock_name, trade_date, stock_code as securityid,
-                open, high, low, close, volume as vol, rowAvg(close, high, low, open) * volume as amount, 
+                open, high, low, close, volatile=high-low, volume, rowAvg(close, high, low, open) * volume as amount, 
                 (ratios(close)-1)*100 as pct_chg, cumwavg(rowAvg(close, high, low), volume) as vwap,  
                 bond_scale, trans_stock_premium, duallow {fields_str}  
                 from t 
@@ -237,7 +237,7 @@ class BondDB(Dolphindb):
 if __name__ == '__main__':
     db = BondDB()
 
-    db.update_dimension_tables()
+    # db.update_dimension_tables()
     # bond_basic_df = db.get_dimension_table_df(BondBasicTable, from_db=True)
 
     # Note: BondBasicTable 从网上获取的全部转债, 
@@ -246,7 +246,7 @@ if __name__ == '__main__':
     # sina 网络的接口有限速, 当前配置可能需要调整
     # db.update_bond_daily_table_by_akshare()
 
-    db.update_bond_daily_table_by_reader(offset=-1)
+    # db.update_bond_daily_table_by_reader(offset=-1)
 
-    # df = db.get_bond_daily_table_df(start_date='2023.10.10', is_indclass_onehot=True)
+    df = db.get_bond_daily_table_df(start_date='2023.10.10', is_indclass_onehot=True)
     print(1)
