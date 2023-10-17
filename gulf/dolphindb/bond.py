@@ -10,6 +10,7 @@ from typing import Union, Dict, List
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from loguru import logger
 
 from gulf.dolphindb.base import Dolphindb
 from gulf.dolphindb.const import Engine
@@ -101,8 +102,8 @@ class BondDB(Dolphindb):
 
             if bond_daily_df.empty:
                 continue
-            bond_daily_df[price_cols] = bond_daily_df[price_cols] / 10
-            bond_daily_df['volume'] = bond_daily_df['volume'] * 1000
+            bond_daily_df.loc[:, price_cols] = bond_daily_df[price_cols] / 10
+            bond_daily_df.loc[:, 'volume'] = bond_daily_df['volume'] * 1000
 
             stock_code = row['正股代码']
             trans_stock_price = row['转股价']
@@ -130,6 +131,8 @@ class BondDB(Dolphindb):
 
             res_dict[bond_code] = dd
 
+        start_datetime, end_datetime = dd.index[0], dd.index[-1]
+        logger.success(f"Data from [{start_datetime}] to [{end_datetime}], offset:{offset} trade days")
         df = pd.concat(res_dict.values()).reset_index().rename(columns={'date': 'trade_date'})
         res_dict.clear()
         self.save_res_dict_to_db_table(partition_table=bond_daily_table, res_dict={'df': df})
@@ -237,7 +240,7 @@ class BondDB(Dolphindb):
 if __name__ == '__main__':
     db = BondDB()
 
-    # db.update_dimension_tables()
+    db.update_dimension_tables()
     # bond_basic_df = db.get_dimension_table_df(BondBasicTable, from_db=True)
 
     # Note: BondBasicTable 从网上获取的全部转债, 
@@ -246,7 +249,7 @@ if __name__ == '__main__':
     # sina 网络的接口有限速, 当前配置可能需要调整
     # db.update_bond_daily_table_by_akshare()
 
-    # db.update_bond_daily_table_by_reader(offset=-1)
+    db.update_bond_daily_table_by_reader(offset=-2)
 
-    df = db.get_bond_daily_table_df(start_date='2023.10.10', is_indclass_onehot=True)
+    # df = db.get_bond_daily_table_df(start_date='2023.10.10', is_indclass_onehot=True)
     print(1)
