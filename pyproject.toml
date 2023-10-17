@@ -14,6 +14,8 @@ python = "^3.8"
 akshare = "^1.11.28"
 dolphindb = "^1.30.22.2"
 requests = "^2.31.0"
+loguru = "^0.7.2"
+mootdx = "^0.11.1"
 
 
 [build-system]
