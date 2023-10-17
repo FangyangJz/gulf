@@ -63,34 +63,41 @@ class Dolphindb:
             if not self.session.existsDatabase(db_path):
                 self.session.run(script)
 
-    def _create_table(
-            self, table: PartitionTable,
-            partition_sort_columns: str = "`jj_code`trade_date"
-    ):
+    def _create_table(self, table: PartitionTable, ):
         """
 
         :param table:
-        :param partition_sort_columns: 排序要把 时间写在最后, TSDB
+        :param partition_sort_columns:
         :return:
         """
-        columns = table.schema.columns
-        types = table.schema.types
         db_path = table.db_path
         table_name = table.name
 
-        tsdb_args = f", sortColumns={partition_sort_columns}, keepDuplicates=FIRST" if self.engine == Engine.TSDB else ""
+        tsdb_args = (
+            f", sortColumns={table.sort_columns}, keepDuplicates={table.keep_duplicates.value}"
+            if self.engine == Engine.TSDB else "")
         create_table_script = f"""
                 db=database('{db_path}')
-                columns={columns}
-                types={types}
-                {table_name}=db.createPartitionedTable(table=table(100000:0,columns,types), tableName=`{table_name}, partitionColumns={partition_sort_columns}{tsdb_args})
+                columns={table.schema.columns}
+                types={table.schema.types}
+                {table_name}=db.createPartitionedTable(
+                    table=table(100000:0,columns,types), 
+                    tableName=`{table_name}, 
+                    partitionColumns={table.partition_columns}{tsdb_args}
+                )
                 """  # 10_0000
 
         if not self.session.existsTable(dbUrl=db_path, tableName=table_name):
             self.session.run(create_table_script)
-            logger.info(f"Create table db_path:{db_path}, table_name: {table_name}")
+            logger.info(
+                f"Create partition table, engine:{self.engine.value}, db_path:{db_path}/{table_name}"
+            )
+            logger.info(
+                f"part_cols:{table.partition_columns}, sort_cols:{table.sort_columns}, "
+                f"keep strategy:{table.keep_duplicates.value}."
+            )
         else:
-            logger.info(f"Table exist. No create, db_path:{db_path}, table_name: {table_name}")
+            logger.info(f"Partition table exist. No create, db_path:{db_path}, table_name: {table_name}")
 
     def get_dimension_table_df(
             self, dim_table_cls: Type[DimensionTable], from_db: bool = True
@@ -141,11 +148,9 @@ class Dolphindb:
 
         re = self.session.loadTable(tableName=table_name, dbPath=db_path)
         re.append(table=table)
-        logger.success(f"Save dimension table, {table_name} to {db_path}")
+        logger.success(f"Save dimension table, {db_path}/{table_name}")
 
-    def save_res_dict_to_db_table(
-            self, partition_table: PartitionTable, res_dict: Dict, partition_col: str = 'jj_code'
-    ):
+    def save_res_dict_to_db_table(self, partition_table: PartitionTable, res_dict: Dict):
         db_path = partition_table.db_path
         table_name = partition_table.name
         columns = partition_table.schema.columns
@@ -154,7 +159,7 @@ class Dolphindb:
         appender = ddb.PartitionedTableAppender(
             dbPath=db_path,
             tableName=table_name,
-            partitionColName=partition_col,
+            partitionColName=partition_table.partition_columns[1],  # 只能指定1列, 根据指定的列分配线程进行写入操作
             dbConnectionPool=self.pool
         )
 
@@ -173,7 +178,8 @@ class Dolphindb:
 
         start_time = time.perf_counter()
         appender.append(res_df)  # TODO 注意 !!! append 的 df columns 顺序必须和建表时的顺序一致
-        logger.success(f"Write len:{len(res_df)} data to db, cost:{time.perf_counter() - start_time:.2f}s")
+        logger.success(
+            f"Write len:{len(res_df)} data to {db_path}/{table_name}, cost:{time.perf_counter() - start_time:.2f}s")
 
         res_dict.clear()
 
