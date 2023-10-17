@@ -97,7 +97,7 @@ class Dolphindb:
                 f"keep strategy:{table.keep_duplicates.value}."
             )
         else:
-            logger.info(f"Partition table exist. No create, db_path:{db_path}, table_name: {table_name}")
+            logger.info(f"Partition table {db_path}/{table_name} exists, no need to create it.")
 
     def get_dimension_table_df(
             self, dim_table_cls: Type[DimensionTable], from_db: bool = True
@@ -150,7 +150,7 @@ class Dolphindb:
         re.append(table=table)
         logger.success(f"Save dimension table, {db_path}/{table_name}")
 
-    def save_res_dict_to_db_table(self, partition_table: PartitionTable, res_dict: Dict):
+    def save_res_dict_to_partition_table(self, partition_table: PartitionTable, res_dict: Dict):
         db_path = partition_table.db_path
         table_name = partition_table.name
         columns = partition_table.schema.columns
@@ -182,6 +182,41 @@ class Dolphindb:
             f"Write len:{len(res_df)} data to {db_path}/{table_name}, cost:{time.perf_counter() - start_time:.2f}s")
 
         res_dict.clear()
+
+    def save_no_schema_df_to_partition_table(
+            self, table_df: pd.DataFrame, table_name: str, partition_like_table: PartitionTable
+    ):
+
+        start_time = time.perf_counter()
+        table = self.session.table(data=table_df)
+        logger.success(
+            f'Upload dataframe to db server, shape: {table_df.shape}, '
+            f'cost: {time.perf_counter()-start_time:.4}s')
+
+        if not self.session.existsTable(dbUrl=partition_like_table.db_path, tableName=table_name):
+            sess_db = self.session.database(dbPath=partition_like_table.db_path)
+
+            if self.engine == Engine.TSDB:
+                sess_db.createPartitionedTable(
+                    table=table, tableName=table_name,
+                    partitionColumns=partition_like_table.partition_columns,  # 注意这个分区数据库是复合分区
+                    sortColumns=partition_like_table.sort_columns,
+                    keepDuplicates=partition_like_table.keep_duplicates.value,
+                )
+            elif self.engine == Engine.OLAP:
+                sess_db.createPartitionedTable(
+                    table=table, tableName=table_name,
+                    partitionColumns='trade_date'
+                )
+            logger.success(f'Partition table {partition_like_table.db_path}/{table_name} not exist. Create it.')
+        else:
+            logger.info(f'Partition table {partition_like_table.db_path}/{table_name} exists, no need to create it.')
+
+        re = self.session.loadTable(tableName=table_name, dbPath=partition_like_table.db_path)
+        start_time = time.perf_counter()
+        re.append(table)
+        logger.success(
+            f'Save memory table {table_name} to partition table, cost: {time.perf_counter() - start_time:.4f}s')
 
     def get_tables(self, db_path: str):
         return self.session.run(

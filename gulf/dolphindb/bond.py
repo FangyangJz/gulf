@@ -75,7 +75,7 @@ class BondDB(Dolphindb):
             res_dict=res_dict
         )
 
-        self.save_res_dict_to_db_table(partition_table=bond_daily_table, res_dict=res_dict)
+        self.save_res_dict_to_partition_table(partition_table=bond_daily_table, res_dict=res_dict)
 
     def update_bond_daily_table_by_reader(self, offset: int = 0):
         """
@@ -135,7 +135,7 @@ class BondDB(Dolphindb):
         logger.success(f"Data from [{start_datetime}] to [{end_datetime}], offset:{offset} trade days")
         df = pd.concat(res_dict.values()).reset_index().rename(columns={'date': 'trade_date'})
         res_dict.clear()
-        self.save_res_dict_to_db_table(partition_table=bond_daily_table, res_dict={'df': df})
+        self.save_res_dict_to_partition_table(partition_table=bond_daily_table, res_dict={'df': df})
 
     def update_dimension_tables(self):
         bond_basic_df = self.get_dimension_table_df(BondBasicTable, from_db=False)
@@ -239,7 +239,6 @@ class BondDB(Dolphindb):
 
 if __name__ == '__main__':
     db = BondDB()
-
     db.update_dimension_tables()
     # bond_basic_df = db.get_dimension_table_df(BondBasicTable, from_db=True)
 
