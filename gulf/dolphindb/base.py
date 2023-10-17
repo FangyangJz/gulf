@@ -196,7 +196,7 @@ class Dolphindb:
         table = self.session.table(data=table_df)
         logger.success(
             f'Upload dataframe to db server, shape: {table_df.shape}, '
-            f'cost: {time.perf_counter()-start_time:.4}s')
+            f'cost: {time.perf_counter() - start_time:.4}s')
 
         if not self.session.existsTable(dbUrl=partition_like_table.db_path, tableName=table_name):
             sess_db = self.session.database(dbPath=partition_like_table.db_path)
@@ -258,6 +258,9 @@ class Dolphindb:
                 delete from t where trade_date < {trade_date};
             """
         )
+
+    def drop_table(self, table: Union[DimensionTable, PartitionTable]):
+        self.session.dropTable(table.db_path, table.name)
 
 
 if __name__ == '__main__':
