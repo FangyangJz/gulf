@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gulf"
-version = "0.1.0"
+version = "0.1.1"
 description = "An open-source integrated finance data source and database application on top of DolphinDB and akshare."
 authors = ["fangyang_gpu <fangyang.jing@hotmail.com>"]
 readme = "README.md"
