@@ -159,7 +159,9 @@ class Dolphindb:
         appender = ddb.PartitionedTableAppender(
             dbPath=db_path,
             tableName=table_name,
-            partitionColName=partition_table.partition_columns[1],  # 只能指定1列, 根据指定的列分配线程进行写入操作
+            # 只能指定1列, 根据指定的列分配线程进行写入操作
+            # 这里指定 trade_date 的时候会遇到 null value row 报错, 解决不了, 还是用 jj_code
+            partitionColName=partition_table.partition_columns[0],
             dbConnectionPool=self.pool
         )
 
@@ -176,10 +178,13 @@ class Dolphindb:
             if DolType_2_np_dtype_dict[dol_type] != dtype:
                 res_df[col] = res_df[col].astype(DolType_2_np_dtype_dict[dol_type])
 
+        # For debug, get any nan value in row
+        # dd = res_df[res_df.isnull().any(axis=1)]
+
         start_time = time.perf_counter()
         appender.append(res_df)  # TODO 注意 !!! append 的 df columns 顺序必须和建表时的顺序一致
         logger.success(
-            f"Write len:{len(res_df)} data to {db_path}/{table_name}, cost:{time.perf_counter() - start_time:.2f}s")
+            f"Write data shape:{res_df.shape} to {db_path}/{table_name}, cost:{time.perf_counter() - start_time:.2f}s")
 
         res_dict.clear()
 
