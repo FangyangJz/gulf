@@ -136,7 +136,9 @@ class StockDB(Dolphindb):
             db_path = "{stock_nfq_daily_table.db_path}";
             db = database(db_path);
             t = loadTable(db, "{stock_nfq_daily_table.name}");
-
+            
+            t = select * from t order by trade_date;
+            
             def get_raw_data_table(market='SH'){{
                 return  select *, cumwavg(rowAvg(close, high, low), volume) as vwap  
                 from t 

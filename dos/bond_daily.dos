@@ -16,6 +16,7 @@ group by jj_code, bar(cumvol, volThreshold) as volBar) where barStart>2021.01.01
 
 // 查看 时间最新 的 10 条数据
 select top 10 * from table order by trade_date desc;
+select * from table where bond_name='中矿转债' order by trade_date;
 
 t1 = select * from table;
 select * from lj(t1, (select mean(open) as mo from t1 where close<100 group by trade_date), `trade_date);

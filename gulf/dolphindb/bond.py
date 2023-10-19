@@ -198,15 +198,23 @@ class BondDB(Dolphindb):
         else:
             filter_ctx_by_date = ""
 
+        # TODO 中矿转债 2023.01.03 pct_chg 计算错误?!
+        # (ratios(close) - 1) * 100 as pct_chg,
+        # (close / move(close, 1) - 1) * 100 as pct_chg,
+        # eachPre(\, close) - 1 as pct_chg
+        # Note !!! 使用 context by 前需要对日期进行排序, 否则会出现计算错误
         res = f"""
                 use ta;
                 db_path = "{bond_daily_table.db_path}";
                 db = database(db_path);
                 t = loadTable(db, "{bond_daily_table.name}");
-
+                
+                t = select * from t order by trade_date;
+                
                 bond_table = select jj_code, bond_name, stock_name, trade_date, stock_code as securityid,
                 open, high, low, close, volatile=high-low, volume, rowAvg(close, high, low, open) * volume as amount, 
-                (ratios(close)-1)*100 as pct_chg, cumwavg(rowAvg(close, high, low), volume) as vwap,  
+                (ratios(close) - 1) * 100 as pct_chg,
+                cumwavg(rowAvg(close, high, low), volume) as vwap,  
                 bond_scale, trans_stock_premium, duallow {fields_str}  
                 from t 
                 where {ctx_by_code_filters_str} 
