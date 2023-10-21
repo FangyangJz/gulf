@@ -43,3 +43,12 @@ pip install -e .
     $ conda activate your_venv_name
     ```
     切换到虚拟环境后, 命令行执行 `poetry update/init/install/add` 等命令, 可以参考该 [stack overflow 链接](https://stackoverflow.com/questions/70851048/does-it-make-sense-to-use-conda-poetry)
+
+### DolphinDB 
+
+* [前往官网下载客户端](https://www.dolphindb.cn/)
+* [Dolphindb 使用文档链接](https://docs.dolphindb.cn/zh/help/index.html)
+* [Python API 文档链接](https://gitee.com/dolphindb/api_python3/blob/master/README_CN.md)
+* [视频教程链接](https://space.bilibili.com/1351925320)
+
+>关于 .dos 文件的执行, 推荐使用 DolphinDB vscode 插件, 无需使用官方 GUI 程序
