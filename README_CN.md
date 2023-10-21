@@ -50,5 +50,5 @@ pip install -e .
 * [Dolphindb 使用文档链接](https://docs.dolphindb.cn/zh/help/index.html)
 * [Python API 文档链接](https://gitee.com/dolphindb/api_python3/blob/master/README_CN.md)
 * [视频教程链接](https://space.bilibili.com/1351925320)
-
+* [官方问答社区](https://ask.dolphindb.net/)
 >关于 .dos 文件的执行, 推荐使用 DolphinDB vscode 插件, 无需使用官方 GUI 程序

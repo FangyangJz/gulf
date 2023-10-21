@@ -45,6 +45,7 @@ Use `poetry` as dependency management and `conda` as virtual environment managem
 * [Dolphindb document](https://docs.dolphindb.cn/zh/help/index.html)
 * [Python API document](https://gitee.com/dolphindb/api_python3/blob/master/README_CN.md)
 * [Video tutorial link](https://space.bilibili.com/1351925320)
+* [Official Q&A community](https://ask.dolphindb.net/)
 
 > For .dos file execution, recommend using the DolphinDB vscode plug-in instead of the official GUI program.
 
