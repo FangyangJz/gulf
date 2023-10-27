@@ -6,18 +6,17 @@
 # @Software : PyCharm
 
 
-f183_192_growth_capability_dict = {
+f183_191_growth_capability_dict = {
     # 7. 发展能力分析
-    '183营业收入增长率(%)': 'operatingIncomeGrowth',
-    '184净利润增长率(%)': 'netProfitGrowthRate',  # NPGR  利润总额－所得税
-    '185净资产增长率(%)': 'netAssetsGrowthRate',
-    '186固定资产增长率(%)': 'fixedAssetsGrowthRate',
-    '187总资产增长率(%)': 'totalAssetsGrowthRate',
-    '188投资收益增长率(%)': 'investmentIncomeGrowthRate',
-    '189营业利润增长率(%)': 'operatingProfitGrowthRate',
-    '190扣非每股收益同比(%)': 'earningPerShareExNonRecurringYOY',
-    '191扣非净利润同比(%)': 'netProfitExNonRecurringYOY',
-    '192暂无': 'None192',
+    '183营业收入增长率(%)': 'FFF183',
+    '184净利润增长率(%)': 'FFF184',  # NPGR  利润总额－所得税
+    '185净资产增长率(%)': 'FFF185',
+    '186固定资产增长率(%)': 'FFF186',
+    '187总资产增长率(%)': 'FFF187',
+    '188投资收益增长率(%)': 'FFF188',
+    '189营业利润增长率(%)': 'FFF189',
+    '190扣非每股收益同比(%)': 'FFF190',
+    '191扣非净利润同比(%)': 'FFF191',
 }
 
 # '''

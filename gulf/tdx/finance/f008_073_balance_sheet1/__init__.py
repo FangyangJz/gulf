@@ -19,7 +19,7 @@ f008_073_balance_sheet_dict = {
     **f041_063_liabilities_dict,
     # 2.3 所有者权益
     **f064_072_owner_equity_dict,
-    '073负债和所有者（或股东权益）合计': 'totalLiabilitiesAndOwnersEquity',
+    '073负债和所有者（或股东权益）合计': 'FFF073',
 }
 
 if __name__ == '__main__':

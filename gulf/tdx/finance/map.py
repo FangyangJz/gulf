@@ -41,14 +41,14 @@ financial_dict = {
     **f159_229_fundamental_analysis_dict,
 
     # 11. 单季度财务指标
-    '230营业收入': 'operatingRevenueSingle',
-    '231营业利润': 'operatingProfitSingle',
-    '232归属于母公司所有者的净利润': 'netProfitBelongingToTheOwnerOfTheParentCompanySingle',
-    '233扣除非经常性损益后的净利润': 'netProfitAfterExtraordinaryGainsAndLossesSingle',
-    '234经营活动产生的现金流量净额': 'netCashFlowsFromOperatingActivitiesSingle',
-    '235投资活动产生的现金流量净额': 'netCashFlowsFromInvestingActivitiesSingle',
-    '236筹资活动产生的现金流量净额': 'netCashFlowsFromFinancingActivitiesSingle',
-    '237现金及现金等价物净增加额': 'netIncreaseInCashAndCashEquivalentsSingle',
+    '230营业收入': 'FFF230',
+    '231营业利润': 'FFF231',
+    '232归属于母公司所有者的净利润': 'FFF232',
+    '233扣除非经常性损益后的净利润': 'FFF233',
+    '234经营活动产生的现金流量净额': 'FFF234',
+    '235投资活动产生的现金流量净额': 'FFF235',
+    '236筹资活动产生的现金流量净额': 'FFF236',
+    '237现金及现金等价物净增加额': 'FFF237',
     # 12.股本股东
     '238总股本': 'totalCapital',
     '239已上市流通A股': 'listedAShares',
@@ -157,5 +157,14 @@ financial_dict = {
     **f561_580_cash_flow_statement_dict,
 }
 
+no_use_dict = {
+    '192': 'FFF192',
+    **{f'{i}': f'FFF{i}' for i in range(323, 401)},
+    **{f'{i}': f'FFF{i}' for i in range(440, 501)},
+    **{f'{i}': f'FFF{i}' for i in range(522, 561)},
+}
+
 if __name__ == "__main__":
-    pass
+    # d1 = {f'{i}': f'FFF{i}' for i in range(440, 501)}
+
+    print(1)
