@@ -45,19 +45,19 @@ def qfq(gbbq_df: pd.DataFrame, cw_dict: Dict[str, pd.DataFrame], tqdm_position=N
         df_qfq = make_fq(code=stock_code, code_df=stock_daily_df, gbbq_df=gbbq_df, cw_dict=cw_dict)
 
         # # TODO
-        # # lefttime_tick = int((time.time() - starttime_tick) / (file_list.index(filename) + 1) * (len(file_list) - (file_list.index(filename) + 1)))
         # if len(df_qfq) > 0:  # 返回值大于0，表示有更新
         #     df_qfq.to_csv(ucfg.tdx['csv_lday'] + os.sep + filename, index=False, encoding='gbk')
         #     df_qfq.to_pickle(ucfg.tdx['pickle'] + os.sep + filename[:-4] + '.pkl')
         #     tq.set_description(filename + "复权完成")
-        # #     print(f'{process_info} 复权完成 已用{(time.time() - starttime_tick):.2f}秒 剩余预计{lefttime_tick}秒')
+        #     print(f'{process_info} 复权完成')
         # else:
         #     tq.set_description(filename + "无需更新")
-        # #     print(f'{process_info} 无需更新 已用{(time.time() - starttime_tick):.2f}秒 剩余预计{lefttime_tick}秒')
+        #     print(f'{process_info} 无需更新')
 
 
 def make_fq(
-        code: str, code_df: pd.DataFrame, gbbq_df: pd.DataFrame, cw_dict: Union[Dict[str, pd.DataFrame], None] = None,
+        code: str, code_df: pd.DataFrame, gbbq_df: pd.DataFrame,
+        cw_dict: Union[Dict[str, pd.DataFrame], None] = None,
         start_date='', end_date='', fqtype: str = 'qfq'
 ) -> pd.DataFrame:
     """
@@ -165,10 +165,7 @@ def make_fq(
 
     # 提取该股除权除息行保存到DF df_cqcx，提取其他信息行到df_gbbq
     df_cqcx = gbbq_df.loc[(gbbq_df['code'] == code) & (gbbq_df['类别'] == '除权除息')]
-    gbbq_df = gbbq_df.loc[(gbbq_df['code'] == code) & (
-            (gbbq_df['类别'] == '股本变化') |
-            (gbbq_df['类别'] == '送配股上市') |
-            (gbbq_df['类别'] == '转配股上市'))]
+    gbbq_df = gbbq_df.loc[(gbbq_df['code'] == code) & (gbbq_df['类别'].isin(['股本变化', '送配股上市', '转配股上市']))]
 
     # 清洗df_gbbq，可能出现同一日期有 配股上市、股本变化两行数据。不清洗后面合并会索引冲突。
     # 下面的代码可以保证删除多个不连续的重复行，用DF dropdup方法不能确保删除的值是大是小
@@ -193,7 +190,7 @@ def make_fq(
     gbbq_df = gbbq_df.assign(date=pd.to_datetime(gbbq_df['权息日'], format='%Y%m%d'))  # 添加date列，设置为datetime64[ns]格式
     gbbq_df.set_index('date', drop=True, inplace=True)  # 设置权息日为索引  (字符串表示的日期 "19910101")
     if len(df_cqcx) > 0:  # =0表示股本变迁中没有该股的除权除息信息。gbbq_lastest_date设置为今天，当作新股处理
-        cqcx_lastest_date = df_cqcx.index[-1]  # .strftime('%Y-%m-%d')  # 提取最新的除权除息日
+        cqcx_lastest_date = df_cqcx.index[-1]  # 提取最新的除权除息日
     else:
         cqcx_lastest_date = str(datetime.date.today())
         flag_newstock = True
@@ -275,14 +272,9 @@ def make_fq(
     # data['preclose'] = data['preclose'] * data['adj']  # 这行没用了
     data = data[data['if_trade']]  # 重建整个表，只保存if_trade列=true的行
 
-    # 抛弃过程处理行，且open值不等于0的行
+    # 抛弃过程处理行，且open值不等于0的行, 复权处理完成
     data = data.drop(['分红-前流通盘', '配股-后总股本', '配股价-前总股本',
                       '送转股-后流通盘', 'if_trade', 'category', 'preclose'], axis=1)[data['open'] != 0]
-    # 复权处理完成
-
-    # 如果没有传参进来，就自己读取财务文件，否则用传参的值
-    if not cw_dict:
-        cw_dict = readall_local_cwfile()
 
     # 计算换手率
     # 财报数据公开后，股本才变更。因此有效时间是“当前财报日至未来日期”。故将结束日期设置为2099年。每次财报更新后更新对应的日期时间段
@@ -290,8 +282,7 @@ def make_fq(
     for cw_date in cw_dict:  # 遍历财报字典  cw_date=财报日期  cw_dict[cw_date]=具体的财报内容
         # 如果复权数据表的首行日期>当前要读取的财务报表日期，则表示此财务报表发布时股票还未上市，跳过此次循环。有例外情况：003001
         # (cw_dict[cw_date][0] == code).any() 表示当前股票code在财务DF里有数据
-        if df_ltg.index[0].strftime('%Y%m%d') <= cw_date <= df_ltg.index[-1].strftime('%Y%m%d') \
-                and len(cw_dict[cw_date]) > 0:
+        if df_ltg.index[0].strftime('%Y%m%d') <= cw_date <= df_ltg.index[-1].strftime('%Y%m%d') and len(cw_dict[cw_date]) > 0:
             if (cw_dict[cw_date][0] == code).any():
                 # 获取目前股票所在行的索引值，具有唯一性，所以直接[0]
                 code_df_index = cw_dict[cw_date][cw_dict[cw_date][0] == code].index.to_list()[0]

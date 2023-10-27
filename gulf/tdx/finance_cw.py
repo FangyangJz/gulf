@@ -4,6 +4,7 @@
 # @Author   : Fangyang
 # @Software : PyCharm
 
+import time
 import zipfile
 from pathlib import Path
 from typing import List, Union, Dict
@@ -12,6 +13,7 @@ import pandas as pd
 from mootdx.affair import Affair
 from gulf.tdx.path import cw_path
 from loguru import logger
+import struct
 
 
 def get_local_cw_file_list(ext_name='.dat') -> List[Path]:
@@ -47,8 +49,6 @@ def get_history_financial_df(filepath: Union[Path, str]) -> pd.DataFrame:
     :param filepath: 字符串类型。传入文件路径
     :return: DataFrame格式。返回解析出的财务文件内容
     """
-    import struct
-
     with open(filepath, 'rb') as cw_file:
         header_pack_format = '<1hI1H3L'
         header_size = struct.calcsize(header_pack_format)
@@ -59,13 +59,10 @@ def get_history_financial_df(filepath: Union[Path, str]) -> pd.DataFrame:
         report_date = stock_header[1]
         report_size = stock_header[4]
         report_fields_count = int(report_size / 4)
-        report_pack_format = '<{}f'.format(report_fields_count)
-        results = []
+        report_pack_format = f'<{report_fields_count}f'
 
-        for stock_idx in range(0, max_count):
-            cw_file.seek(header_size + stock_idx * struct.calcsize("<6s1c1L"))
-            si = cw_file.read(stock_item_size)
-            stock_item = struct.unpack("<6s1c1L", si)
+        results = []
+        for stock_item in struct.iter_unpack("<6s1c1L", cw_file.read(max_count * struct.calcsize("<6s1c1L"))):
             code = stock_item[0].decode("utf-8")
             foa = stock_item[2]
             cw_file.seek(foa)
@@ -84,12 +81,12 @@ def get_cw_dict() -> Dict[str, pd.DataFrame]:
 
     logger.info(f'Loading local financial data ...')
     cw_dict = {}
-    for i in tqdm(get_local_cw_file_list()):
-        cw_df = get_history_financial_df(i)
 
+    for i in tqdm(get_local_cw_file_list()):
+
+        cw_df = get_history_financial_df(i)
         if cw_df.empty:
             continue
-
         cw_dict[i.stem[4:]] = cw_df
 
     return cw_dict
@@ -98,5 +95,7 @@ def get_cw_dict() -> Dict[str, pd.DataFrame]:
 if __name__ == '__main__':
     update_cw_data()
     file_list = get_local_cw_file_list()
+    start_time = time.perf_counter()
     cw_test_dict = get_cw_dict()
+    print(f'Time cost: {time.perf_counter() - start_time:.4f}s')
     print(1)
