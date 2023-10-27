@@ -4,8 +4,11 @@
 # @Author   : Fangyang
 # @Software : PyCharm
 
+import os
 import time
 import zipfile
+from multiprocessing import Pool, Manager
+from multiprocessing.pool import Pool as PoolType
 from pathlib import Path
 from typing import List, Union, Dict
 
@@ -76,18 +79,59 @@ def get_history_financial_df(filepath: Union[Path, str]) -> pd.DataFrame:
     return pd.DataFrame(results)
 
 
-def get_cw_dict() -> Dict[str, pd.DataFrame]:
-    from tqdm import tqdm
-
-    logger.info(f'Loading local financial data ...')
-    cw_dict = {}
-
-    for i in tqdm(get_local_cw_file_list()):
-
+def update_cw_dict(part_local_cw_file_list: List[Path], cw_dict: Dict[str, pd.DataFrame]):
+    for i in part_local_cw_file_list:
         cw_df = get_history_financial_df(i)
         if cw_df.empty:
             continue
         cw_dict[i.stem[4:]] = cw_df
+
+
+def get_cw_dict() -> Dict[str, pd.DataFrame]:
+    logger.info('Loading local financial data with 1 process...')
+    cw_dict = {}
+    update_cw_dict(get_local_cw_file_list(), cw_dict)
+    return cw_dict
+
+
+def get_cw_dict_acc(pool: PoolType = None) -> Dict[str, pd.DataFrame]:
+    from tqdm import tqdm
+
+    build_in_pool = False
+    if not isinstance(pool, PoolType):
+        logger.info(f'Not pass multiprocess pool in parameter, build in function.')
+        build_in_pool = True
+        pool = Pool(os.cpu_count() - 1)
+    else:
+        logger.info('Use external multiprocess pool.')
+
+    logger.info(
+        f'Start to load local financial data with multiprocess. Process nums:{pool._processes}, state:{pool._state}')
+
+    local_cw_file_list = get_local_cw_file_list()
+    step = int(len(local_cw_file_list) / (4 * pool._processes))  # tune coe 4 get best speed
+    pbar = tqdm(total=int(len(local_cw_file_list) / step))
+    pbar.set_description(f'Function get_cw_dict_acc() total {len(local_cw_file_list)}, step {step}')
+
+    # set multiprocess
+    _manager = Manager()
+    cw_dict = _manager.dict()
+    for i in range(0, len(local_cw_file_list), step):
+        list_r = len(local_cw_file_list) if i + step > len(local_cw_file_list) else i + step
+        pool.apply_async(
+            update_cw_dict,
+            args=(local_cw_file_list[i:list_r], cw_dict),
+            callback=lambda *args: pbar.update()
+        )
+
+    if build_in_pool:
+        pool.close()
+        pool.join()
+
+    # use self method copy value, slow 2s
+    # cw_dict = cw_dict._getvalue()
+    cw_dict = dict(cw_dict)
+    _manager.shutdown()
 
     return cw_dict
 
@@ -95,7 +139,12 @@ def get_cw_dict() -> Dict[str, pd.DataFrame]:
 if __name__ == '__main__':
     update_cw_data()
     file_list = get_local_cw_file_list()
+
     start_time = time.perf_counter()
-    cw_test_dict = get_cw_dict()
-    print(f'Time cost: {time.perf_counter() - start_time:.4f}s')
+    cw_test_dict1 = get_cw_dict_acc()
+    logger.success(f'{os.cpu_count() - 1} process time cost: {time.perf_counter() - start_time:.4f}s')
+
+    start_time = time.perf_counter()
+    cw_test_dict2 = get_cw_dict()
+    logger.success(f'1 process time cost: {time.perf_counter() - start_time:.4f}s')
     print(1)

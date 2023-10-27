@@ -5,28 +5,33 @@
 # @Software : PyCharm
 
 import datetime
+import os
+import time
+from multiprocessing import Pool, Manager
+from multiprocessing.managers import DictProxy
+from multiprocessing.pool import Pool as PoolType
 from typing import Dict, Union
 
 import numpy as np
 import pandas as pd
+from loguru import logger
 
 from tqdm import tqdm
 
 from gulf.dolphindb.tables import StockBasicTable
 from mootdx.reader import Reader
 from gulf.dolphindb.stock import StockDB
-from gulf.tdx.finance_cw import get_cw_dict
+from gulf.tdx.finance_cw import get_cw_dict_acc
 from gulf.tdx.path import gbbq_path, tdx_path
 
 
-def qfq(gbbq_df: pd.DataFrame, cw_dict: Dict[str, pd.DataFrame], tqdm_position=None):
-    offset = 1
-    db = StockDB()
+def update_res_dict(
+        stock_df: pd.DataFrame, gbbq_df: pd.DataFrame,
+        cw_dict: Dict[str, pd.DataFrame], res_dict: DictProxy, offset: int
+):
     reader = Reader.factory(market='std', tdxdir=tdx_path)
-    stock_basic_df = db.get_dimension_table_df(StockBasicTable, from_db=True)
 
-    res_dict = dict()
-    for idx, row in tqdm(stock_basic_df.iterrows()):
+    for idx, row in stock_df.iterrows():
         stock_code = row['代码']
 
         stock_daily_df = reader.daily(symbol=stock_code)
@@ -43,16 +48,64 @@ def qfq(gbbq_df: pd.DataFrame, cw_dict: Dict[str, pd.DataFrame], tqdm_position=N
         #                      dtype={'code': str})
 
         df_qfq = make_fq(code=stock_code, code_df=stock_daily_df, gbbq_df=gbbq_df, cw_dict=cw_dict)
+        res_dict[stock_code] = df_qfq
 
-        # # TODO
-        # if len(df_qfq) > 0:  # 返回值大于0，表示有更新
-        #     df_qfq.to_csv(ucfg.tdx['csv_lday'] + os.sep + filename, index=False, encoding='gbk')
-        #     df_qfq.to_pickle(ucfg.tdx['pickle'] + os.sep + filename[:-4] + '.pkl')
-        #     tq.set_description(filename + "复权完成")
-        #     print(f'{process_info} 复权完成')
-        # else:
-        #     tq.set_description(filename + "无需更新")
-        #     print(f'{process_info} 无需更新')
+
+def qfq_acc(gbbq_df: pd.DataFrame, cw_dict: Dict[str, pd.DataFrame], pool: PoolType = None) -> Dict[str, pd.DataFrame]:
+    build_in_pool = False
+    if not isinstance(pool, PoolType):
+        logger.info(f'Not pass multiprocess pool in parameter, build in function.')
+        build_in_pool = True
+        pool = Pool(os.cpu_count() - 1)
+    else:
+        logger.info('Use external multiprocess pool.')
+
+    logger.info(
+        f'Start to update_res_dict with multiprocess. Process nums:{pool._processes}, state:{pool._state}')
+
+    # set database and get stock basic data
+    offset = 1
+    db = StockDB()
+    # Tips: For debug use dataframe slice
+    stock_basic_df = db.get_dimension_table_df(StockBasicTable, from_db=True)  # .iloc[:1000]
+
+    # set progress bar
+    step = int(len(stock_basic_df) / (4 * pool._processes))  # tune coe 4 get best speed
+    pbar = tqdm(total=int(len(stock_basic_df) / step))
+    pbar.set_description(f'Function qfq_acc(), total {len(stock_basic_df)}, step {step}')
+
+    # set multiprocess
+    _manager = Manager()
+    res_dict = _manager.dict()
+    for i in range(0, len(stock_basic_df), step):
+        pool.apply_async(
+            update_res_dict,
+            args=(stock_basic_df.iloc[i:i + step], gbbq_df, cw_dict, res_dict, offset),
+            callback=lambda *args: pbar.update()
+        )
+
+    if build_in_pool:
+        pool.close()
+        pool.join()
+
+    res_dict = dict(res_dict)
+    _manager.shutdown()
+
+    return res_dict
+
+
+def qfq(gbbq_df: pd.DataFrame, cw_dict: Dict[str, pd.DataFrame]) -> Dict[str, pd.DataFrame]:
+    # set database and get stock basic data
+    offset = 1
+    db = StockDB()
+    # Tips: For debug use dataframe slice
+    stock_basic_df = db.get_dimension_table_df(StockBasicTable, from_db=True)  # .iloc[:1000]
+
+    logger.info('Function qfq with 1 process...')
+    res_dict = dict()
+    update_res_dict(stock_basic_df, gbbq_df, cw_dict, res_dict, offset)
+
+    return res_dict
 
 
 def make_fq(
@@ -282,7 +335,8 @@ def make_fq(
     for cw_date in cw_dict:  # 遍历财报字典  cw_date=财报日期  cw_dict[cw_date]=具体的财报内容
         # 如果复权数据表的首行日期>当前要读取的财务报表日期，则表示此财务报表发布时股票还未上市，跳过此次循环。有例外情况：003001
         # (cw_dict[cw_date][0] == code).any() 表示当前股票code在财务DF里有数据
-        if df_ltg.index[0].strftime('%Y%m%d') <= cw_date <= df_ltg.index[-1].strftime('%Y%m%d') and len(cw_dict[cw_date]) > 0:
+        if df_ltg.index[0].strftime('%Y%m%d') <= cw_date <= df_ltg.index[-1].strftime('%Y%m%d') and len(
+                cw_dict[cw_date]) > 0:
             if (cw_dict[cw_date][0] == code).any():
                 # 获取目前股票所在行的索引值，具有唯一性，所以直接[0]
                 code_df_index = cw_dict[cw_date][cw_dict[cw_date][0] == code].index.to_list()[0]
@@ -305,7 +359,7 @@ def make_fq(
     if '流通股' in data.columns.to_list():
         data['流通市值'] = data['流通股'] * data['close']
         data['换手率'] = data['volume'] / data['流通股'] * 100
-        data = data.round({'流通市值': 2, '换手率': 2, })  # 指定列四舍五入
+        data = data.round({'流通市值': 2, '换手率': 5, })  # 指定列四舍五入
     if flag_attach:  # 追加模式，则附加最新处理的数据
         data = df_code_original.append(data)
 
@@ -319,11 +373,46 @@ def make_fq(
         data = data[start_date:end_date]
     data.reset_index(drop=False, inplace=True)  # 重置索引行，数字索引，date列到第1列，保存为str '1991-01-01' 格式
     # 最后调整列顺序
-    # data = data.reindex(columns=['code', 'date', 'open', 'high', 'low', 'close', 'vol', 'amount', 'adj', '流通股', '流通市值', '换手率'])
+    # data = data.reindex(
+    # columns=['code', 'date', 'open', 'high', 'low', 'close', 'vol', 'amount', 'adj', '流通股', '流通市值', '换手率'])
     return data
 
 
 if __name__ == '__main__':
-    cw_dict = get_cw_dict()
     df_gbbq = pd.read_csv(gbbq_path / 'gbbq.csv', dtype={'code': str})
-    qfq(df_gbbq, cw_dict)
+
+    #########################
+    build_in_pool_start_time = time.perf_counter()
+
+    cw_dict = get_cw_dict_acc()
+
+    qfq_acc_start_time = time.perf_counter()
+    res_dict1 = qfq_acc(df_gbbq, cw_dict)
+    qfq_acc_cost_time = time.perf_counter() - qfq_acc_start_time
+
+    build_in_pool_cost_time = time.perf_counter() - build_in_pool_start_time
+
+    ########################
+    qfq_start_time = time.perf_counter()
+    res_dict2 = qfq(df_gbbq, cw_dict)
+    qfq_cost_time = time.perf_counter() - qfq_start_time
+
+    logger.success(f'qfq_acc_cost_time:{qfq_acc_cost_time:.4f}s')
+    logger.success(f'qfq_cost_time:{qfq_cost_time:.4f}s')
+    logger.success(f'build_in_pool_cost_time:{build_in_pool_cost_time:.4f}s')
+
+    print(1)
+
+    #########################
+    # 暂时不要使用从外传入进程池的方式, 因为共用进程池的时候 qfq_acc 使用的 cw_dict 不完整,
+    # 而且还存在 manager 关闭的问题
+    # build_ex_pool_start_time = time.perf_counter()
+    # p = Pool(os.cpu_count() - 1)
+    # cw_dict2 = get_cw_dict_acc(pool=p)
+    # res_dict3 = qfq_acc(df_gbbq, cw_dict2, pool=p)
+    # p.close()
+    # p.join()
+    # build_ex_pool_cost_time = time.perf_counter() - build_ex_pool_start_time
+
+    # logger.success(f'build_ex_pool_cost_time:{build_ex_pool_cost_time:.4f}s')
+    # print(1)
