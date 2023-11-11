@@ -50,15 +50,6 @@ class StockDB(Dolphindb):
         }
 
     @property
-    def init_daily_code_db_script(self):
-        return f"""
-        db_code_hash=database(, HASH, [SYMBOL, 40])
-        yearRange=date({self.start_year}.01M + 12*0..{self.end_year - self.start_year})
-        db_date_range=database(, RANGE, yearRange)
-        db=database('{DfsDbPath.stock_daily_code}', COMPO, [db_code_hash,db_date_range], engine=`{self.engine.value})
-        """
-
-    @property
     def init_daily_db_script(self):
         """
         只有日期 没有 股票代码
@@ -67,6 +58,45 @@ class StockDB(Dolphindb):
         yearRange=date({self.start_year}.01M + 12*0..{self.end_year - self.start_year})
         db=database('{DfsDbPath.stock_daily}', RANGE, yearRange, engine=`{self.engine.value})
         """
+
+    @property
+    def init_daily_code_db_script(self):
+        """
+        10年约1G, [年, value] 分区
+        :return:
+        """
+        return f"""
+        db_code_hash=database(, HASH, [SYMBOL, 40])
+        yearRange=date({self.start_year}.01M + 12*0..{self.end_year - self.start_year})
+        db_date_range=database(, RANGE, yearRange)
+        db=database('{DfsDbPath.stock_daily_code}', COMPO, [db_code_hash,db_date_range], engine=`{self.engine.value})
+        """
+
+    @property
+    def init_minute_code_db_script(self):
+        """
+        1年约20G, 按[月, value, 股票名] HASH 3 组合分区
+        :return:
+        """
+        return f"""
+            db_code_hash=database(, HASH, [SYMBOL, 40])
+            yearRange=date({self.start_year}.01M + 12*0..{self.end_year - self.start_year})
+            db_date_range=database(, RANGE, yearRange)
+            db=database('{DfsDbPath.stock_daily_code}', COMPO, [db_code_hash,db_date_range], engine=`{self.engine.value})
+            """
+
+    @property
+    def init_trade2trade_code_db_script(self):
+        """
+        每天约3G, [天, value, 股票名] HASH 20 分区
+        :return:
+        """
+        return f"""
+            db_code_hash=database(, HASH, [SYMBOL, 40])
+            yearRange=date({self.start_year}.01M + 12*0..{self.end_year - self.start_year})
+            db_date_range=database(, RANGE, yearRange)
+            db=database('{DfsDbPath.stock_daily_code}', COMPO, [db_code_hash,db_date_range], engine=`{self.engine.value})
+            """
 
     def update_stock_nfq_daily_table_by_reader(self, offset: int = 0):
         """
